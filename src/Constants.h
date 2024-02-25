@@ -37,7 +37,9 @@
 #define JTWSTM                      20     // JTW Astronomy JTWSTM telescope mount controller Rev 2.1
 #define MANTICORE                   21     // JTW Astronomy MANTICORE telescope mount controller Rev 1.0
 
-#define PINMAP_LAST                 21
+#define MaxPCB4Mesu                 22     // PP setup for mesu 200
+
+#define PINMAP_LAST                 22
 
 // WEATHER sensors (temperature, pressure, and humidity)
 #define WEATHER_FIRST               1
