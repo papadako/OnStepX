@@ -50,6 +50,24 @@
 // =================================================================================================================================
 // MOUNT ===========================================================================================================================
 
+// Important for PID
+
+/* pMode is the proportional mode parameter with options for pOnError proportional on error (default), 
+   pOnMeas proportional on measurement and pOnErrorMeas which is 0.5 pOnError + 0.5 pOnMeas. */
+#define PID_PMODE                     pOnError // pOnError (default), pOnMeas, pOnErrorMeas
+
+/* awMode is the integral anti-windup parameter with an option for iAwCondition (default) that is based on PI terms to provide some integral correction, 
+   prevent deep saturation and reduce overshoot. TheiAwClamp option clamps the summation of the pmTerm and iTerm. 
+   The iAwOff option turns off all anti-windup. */
+#define PID_IMODE                     iAwClamp // iAwCondition (default), iAwClamp, iAwOff
+
+/* dMode is the derivative mode parameter with options for dOnError derivative on error, dOnMeas derivative on measurement (default).*/
+#define PID_DMODE                     dOnMeas // dOnMeas (default), dOnError
+
+// sampling 10000 (default)
+#define PID_SAMPLE_TIME_US            500
+
+
 // Driver models (Step/Dir and Servo) many have specific requirements so be sure to follow the link below to help learn about these.
 // Typically: A4988, DRV8825, LV8729, S109, TMC2130, TMC5160, TMC2209, etc.
 
@@ -65,15 +83,16 @@
 #define AXIS1_SERVO_PH1_STATE         HIGH
 #define AXIS1_SERVO_PH2_STATE         LOW
 #define AXIS1_SERVO_VELOCITY_MAX      100
-#define AXIS1_SERVO_ACCELERATION      60
-#define AXIS1_SERVO_P                 2
-#define AXIS1_SERVO_I                 5
-#define AXIS1_SERVO_D                 0
+#define AXIS1_SERVO_ACCELERATION      50
+#define AXIS1_SERVO_P                 30 
+#define AXIS1_SERVO_I                 130
+#define AXIS1_SERVO_D                 30
 #define AXIS1_PID_P_GOTO              30
-#define AXIS1_PID_I_GOTO              130
-#define AXIS1_PID_D_GOTO              30
-#define AXIS1_PID_SENSITIVITY		  25  // a setting of 0 now switches between PID and PID_GOTO when slews start/stop instead of continuously variable based on so % of the power/velocity.
+#define AXIS1_PID_I_GOTO              20
+#define AXIS1_PID_D_GOTO              10
+#define AXIS1_PID_SENSITIVITY         25  // a setting of 0 now switches between PID and PID_GOTO when slews start/stop instead of continuously variable based on so % of the power/velocity.
 #define AXIS1_ENCODER                 AB
+
 // end mesu-200 specifics
 
 #define AXIS1_REVERSE                 ON //    OFF, ON Reverses movement direction, or reverse wiring instead to correct.   <-Often
@@ -116,14 +135,14 @@
 #define AXIS2_SERVO_PH1_STATE           HIGH
 #define AXIS2_SERVO_PH2_STATE           LOW
 #define AXIS2_SERVO_VELOCITY_MAX        100
-#define AXIS2_SERVO_ACCELERATION        60
-#define AXIS2_SERVO_P                   2
-#define AXIS2_SERVO_I                   6.5
-#define AXIS2_SERVO_D                   0
-#define AXIS2_PID_P_GOTO                2
-#define AXIS2_PID_I_GOTO                6.5
-#define AXIS2_PID_D_GOTO                3
-#define AXIS2_PID_SENSITIVITY		    25 // a setting of 0 now switches between PID and PID_GOTO when slews start/stop instead of continuously variable based on so % of the power/velocity.
+#define AXIS2_SERVO_ACCELERATION        50
+#define AXIS2_SERVO_P                   30
+#define AXIS2_SERVO_I                   130
+#define AXIS2_SERVO_D                   30
+#define AXIS2_PID_P_GOTO                30
+#define AXIS2_PID_I_GOTO                20
+#define AXIS2_PID_D_GOTO                10
+#define AXIS2_PID_SENSITIVITY		25 // a setting of 0 now switches between PID and PID_GOTO when slews start/stop instead of continuously variable based on so % of the power/velocity.
 #define AXIS2_ENCODER                   AB
 // end mesu-200 specifics
 
