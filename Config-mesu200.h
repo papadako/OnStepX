@@ -76,14 +76,14 @@
 
 // If runtime axis settings are enabled changes in the section below will be ignored (disable in SWS or by wiping NV/EEPROM):
 // \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ 
-#define AXIS1_STEPS_PER_DEGREE      22275 //  12800, n. Number of steps per degree:                                          <-Req'd
+#define AXIS1_STEPS_PER_DEGREE      22160 //  12800, n. Number of steps per degree:                                          <-Req'd
                                           //         n = (stepper_steps * micro_steps * overall_gear_reduction)/360.0
 
 // mesu-200 specifics
 #define AXIS1_SERVO_PH1_STATE         HIGH
 #define AXIS1_SERVO_PH2_STATE         LOW
 #define AXIS1_SERVO_VELOCITY_MAX      100
-#define AXIS1_SERVO_ACCELERATION      50
+#define AXIS1_SERVO_ACCELERATION      20
 #define AXIS1_SERVO_P                 30 
 #define AXIS1_SERVO_I                 130
 #define AXIS1_SERVO_D                 30
@@ -128,14 +128,14 @@
 
 // If runtime axis settings are enabled changes in the section below will be ignored (disable in SWS or by wiping NV/EEPROM):
 // \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
-#define AXIS2_STEPS_PER_DEGREE      10888 //  12800, n. Number of steps per degree:                                          <-Req'd
+#define AXIS2_STEPS_PER_DEGREE      22267 //  12800, n. Number of steps per degree:                                          <-Req'd
                                           //         n = (stepper_steps * micro_steps * overall_gear_reduction)/360.0
 
 // mesu-200 specifics
 #define AXIS2_SERVO_PH1_STATE           HIGH
 #define AXIS2_SERVO_PH2_STATE           LOW
 #define AXIS2_SERVO_VELOCITY_MAX        100
-#define AXIS2_SERVO_ACCELERATION        50
+#define AXIS2_SERVO_ACCELERATION        20
 #define AXIS2_SERVO_P                   30
 #define AXIS2_SERVO_I                   130
 #define AXIS2_SERVO_D                   30
