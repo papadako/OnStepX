@@ -95,7 +95,7 @@ void StepDirTmcSPI::init(float param1, float param2, float param3, float param4,
 
 // validate driver parameters
 bool StepDirTmcSPI::validateParameters(float param1, float param2, float param3, float param4, float param5, float param6) {
-  StepDirDriver::validateParameters(param1, param2, param3, param4, param5, param6);
+  if (!StepDirDriver::validateParameters(param1, param2, param3, param4, param5, param6)) return false;
 
   int maxCurrent;
   if (settings.model == TMC2130) maxCurrent = 1500; else
@@ -142,7 +142,7 @@ int StepDirTmcSPI::modeMicrostepSlewing() {
 
 void StepDirTmcSPI::modeDecayTracking() {
   setDecayMode(settings.decay);
-  driver->rms_current(settings.currentRun*0.7071F, settings.currentHold/settings.currentRun);
+  driver->rms_current(settings.currentRun*0.7071F, (float)settings.currentHold/(float)settings.currentRun);
 }
 
 void StepDirTmcSPI::modeDecaySlewing() {

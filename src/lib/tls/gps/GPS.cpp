@@ -94,7 +94,7 @@ bool TlsGPS::init() {
   }
 
   VF("MSG: TLS, GPS start monitor task (rate 10ms priority 7)... ");
-  if (tasks.add(1, 0, true, 7, gpsPoll, "gpsPoll")) { VLF("success"); active = true; } else { VLF("FAILED!"); }
+  if (tasks.add(10, 0, true, 7, gpsPoll, "gpsPoll")) { VLF("success"); active = true; } else { VLF("FAILED!"); }
 
   return active;
 }
@@ -122,7 +122,7 @@ bool TlsGPS::get(JulianDate &ut1) {
       sentence = gps.encode(SERIAL_GPS.read());
     }
   }
-  
+
   GregorianDate greg;
   greg.year = gps.date.year();
   greg.month = gps.date.month();
@@ -130,7 +130,18 @@ bool TlsGPS::get(JulianDate &ut1) {
   ut1 = calendars.gregorianToJulianDay(greg);
   // DUT1 = UT1 − UTC
   // UT1 = DUT1 + UTC
-  ut1.hour = gps.time.hour() + gps.time.minute()/60.0 + (gps.time.second() + DUT1)/3600.0;
+
+  double second = gps.time.second() + gps.time.age()/1000.0;
+  #if defined(TIME_LOCATION_PPS_SENSE) && (TIME_LOCATION_PPS_SENSE) != OFF
+    if (pps.synced) {
+      unsigned long t;
+      // wait until we're roughly in the middle of a second
+      do { t = micros() - pps.lastMicros; } while (t < 400000 || t > 600000);
+      second = floor(gps.time.second() + gps.time.age()/1000.0) + t/1000000.0;
+    }
+  #endif
+
+  ut1.hour = gps.time.hour() + gps.time.minute()/60.0 + (second + DUT1)/3600.0;
 
   // adjust date/time for DUT1 as needed
   if (ut1.hour >= 24.0L) { ut1.hour -= 24.0L; ut1.day += 1.0L; } else

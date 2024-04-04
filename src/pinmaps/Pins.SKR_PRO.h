@@ -4,7 +4,6 @@
 
 #if defined(STM32F407xx)
 
-// Serial ports (see Pins.defaults.h for SERIAL_A)
 // Serial: Built in USB (not TTL)
 // Serial1: RX1 Pin PA10, TX1 Pin PA9 (Connector Labeled TFT)
 // Serial3: RX3 Pin PD9, TX3 Pin PD8 (Connector Labeled SERIAL3)
@@ -133,7 +132,7 @@
 #define AXIS2_M2_PIN            PB8              // SPI CS (UART TX)
 #define AXIS2_M3_PIN            PC11
 #define AXIS2_STEP_PIN          PE11             // TIM1
-#define AXIS2_DIR_PIN           PE0
+#define AXIS2_DIR_PIN           PE8
 #ifndef AXIS2_SENSE_HOME_PIN
   #define AXIS2_SENSE_HOME_PIN  PG5              // Home SW for Axis1 (Limit Connector Labeled E2)
 #endif

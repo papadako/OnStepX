@@ -69,8 +69,6 @@ CommandError Limits::validateTarget(Coordinate *coords, bool *eastReachable, boo
 
   double a1e, a2e, a1w, a2w;
 
-  Coordinate current = mount.getMountPosition(CR_MOUNT);
-
   PierSide lastPierSide = coords->pierSide; 
   coords->pierSide = PIER_SIDE_EAST;
   transform.mountToInstrument(coords, &a1e, &a2e);
@@ -158,9 +156,9 @@ CommandError Limits::validateTarget(Coordinate *coords, bool *eastReachable, boo
   *westReachable = a1w >= westLimitMin && a1w <= westLimitMax;
 
   VF("MSG: Mount, validate east target axis1 "); V(radToDeg(eastLimitMin)); VF(" < "); V(radToDeg(a1e)); VF(" < "); V(radToDeg(eastLimitMax));
-  if (*eastReachable) VLF(" TRUE"); else VLF(" FALSE");
+  if (*eastReachable) { VLF(" TRUE"); } else { VLF(" FALSE"); }
   VF("MSG: Mount, validate west target axis1 "); V(radToDeg(westLimitMin)); VF(" < "); V(radToDeg(a1w)); VF(" < "); V(radToDeg(westLimitMax));
-  if (*westReachable) VLF(" TRUE"); else VLF(" FALSE");
+  if (*westReachable) { VLF(" TRUE"); } else { VLF(" FALSE"); }
 
   if (!*eastReachable && !*westReachable) {
     VLF("MSG: Mount, validate target outside limits");
@@ -229,13 +227,13 @@ uint8_t Limits::errorCode() {
       error.limitSense.axis2.min || error.limitSense.axis2.max) return (uint8_t)ERR_LIMIT_SENSE;
   if (error.altitude.min) return (uint8_t)ERR_ALT_MIN;
   if (error.altitude.max) return (uint8_t)ERR_ALT_MAX;
-  if (transform.mountType == ALTAZM) {
+  if (transform.isEquatorial()) {
+    if (error.limit.axis1.min || error.limit.axis1.max) return (uint8_t)ERR_UNDER_POLE;
+    if (error.limit.axis2.min || error.limit.axis2.max) return (uint8_t)ERR_DEC;
+  } else {
     if (error.limit.axis1.min || error.limit.axis1.max) return (uint8_t)ERR_AZM;
     if (error.limit.axis2.min) return (uint8_t)ERR_ALT_MIN;
     if (error.limit.axis2.max) return (uint8_t)ERR_ALT_MAX;
-  } else {
-    if (error.limit.axis1.min || error.limit.axis1.max) return (uint8_t)ERR_UNDER_POLE;
-    if (error.limit.axis2.min || error.limit.axis2.max) return (uint8_t)ERR_DEC;
   }
   if (error.meridian.east || error.meridian.west) return (uint8_t)ERR_MERIDIAN;
   if (initError.nv || initError.value) return (uint8_t)ERR_NV_INIT;
@@ -258,7 +256,7 @@ void Limits::stopAxis1(GuideAction stopDirection) {
     goTo.abort();
   #endif
   guide.stopAxis1(stopDirection, true);
-  if (stopDirection == GA_FORWARD || transform.mountType == ALTAZM) mount.tracking(false);
+  if (stopDirection == GA_FORWARD || !transform.isEquatorial()) mount.tracking(false);
 }
 
 void Limits::stopAxis2(GuideAction stopDirection) {
@@ -266,7 +264,7 @@ void Limits::stopAxis2(GuideAction stopDirection) {
     goTo.abort();
   #endif
   guide.stopAxis2(stopDirection, true);
-  if (transform.mountType == ALTAZM) mount.tracking(false);
+  if (!transform.isEquatorial()) mount.tracking(false);
 }
 
 void Limits::poll() {
