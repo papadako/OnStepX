@@ -167,7 +167,7 @@ CommandError Limits::validateTarget(Coordinate *coords, bool *eastReachable, boo
     return CE_SLEW_ERR_OUTSIDE_LIMITS;
   }
 
-  if (AXIS2_TANGENT_ARM == OFF) {
+  if (transform.isEquatorial()) {
     if (flt(coords->d, axis2.settings.limits.min)) {
       VF("MSG: Mount, validate failed Dec past min limit by ");
       V(radToDeg(coords->d - axis2.settings.limits.min)*3600.0); VLF(" arc-secs");
@@ -278,7 +278,9 @@ void Limits::poll() {
   if (limitsEnabled && guide.state != GU_HOME_GUIDE && guide.state != GU_HOME_GUIDE_ABORT) {
     // overhead and horizon limits
     if (current.a < settings.altitude.min) error.altitude.min = true; else error.altitude.min = false;
-    if (current.a > settings.altitude.max) error.altitude.max = true; else error.altitude.max = false;
+    if (fabs(settings.altitude.max - Deg90) > OneArcSec) {
+      if (current.a > settings.altitude.max) error.altitude.max = true; else error.altitude.max = false;
+    } else error.altitude.max = false;
 
     // meridian limits
     if (transform.mountType == GEM && current.pierSide == PIER_SIDE_EAST) {
