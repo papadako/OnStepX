@@ -62,11 +62,10 @@
 #define PID_IMODE                     iAwClamp // iAwCondition (default), iAwClamp, iAwOff
 
 /* dMode is the derivative mode parameter with options for dOnError derivative on error, dOnMeas derivative on measurement (default).*/
-#define PID_DMODE                     dOnMeas // dOnMeas (default), dOnError
+#define PID_DMODE                     dOnError // dOnMeas (default), dOnError
 
 // sampling 10000 (default)
 #define PID_SAMPLE_TIME_US            500
-
 
 // Driver models (Step/Dir and Servo) many have specific requirements so be sure to follow the link below to help learn about these.
 // Typically: A4988, DRV8825, LV8729, S109, TMC2130, TMC5160, TMC2209, etc.
@@ -82,15 +81,15 @@
 // mesu-200 specifics
 #define AXIS1_SERVO_PH1_STATE         HIGH
 #define AXIS1_SERVO_PH2_STATE         LOW
-#define AXIS1_SERVO_VELOCITY_MAX      100
+#define AXIS1_SERVO_VELOCITY_MAX      90
 #define AXIS1_SERVO_ACCELERATION      80
-#define AXIS1_SERVO_P                 5000
-#define AXIS1_SERVO_I                 1
-#define AXIS1_SERVO_D                 1
+#define AXIS1_SERVO_P                 40
+#define AXIS1_SERVO_I                 30
+#define AXIS1_SERVO_D                 20
 #define AXIS1_PID_P_GOTO              30
 #define AXIS1_PID_I_GOTO              20
 #define AXIS1_PID_D_GOTO              10
-#define AXIS1_PID_SENSITIVITY         25  // a setting of 0 now switches between PID and PID_GOTO when slews start/stop instead of continuously variable based on so % of the power/velocity.
+#define AXIS1_PID_SENSITIVITY         0 // a setting of 0 now switches between PID and PID_GOTO when slews start/stop instead of continuously variable based on so % of the power/velocity.
 #define AXIS1_ENCODER                 AB
 
 // end mesu-200 specifics
@@ -134,15 +133,15 @@
 // mesu-200 specifics
 #define AXIS2_SERVO_PH1_STATE           HIGH
 #define AXIS2_SERVO_PH2_STATE           LOW
-#define AXIS2_SERVO_VELOCITY_MAX        100
-#define AXIS2_SERVO_ACCELERATION        80
-#define AXIS2_SERVO_P                   5000
-#define AXIS2_SERVO_I                   1
-#define AXIS2_SERVO_D                   1
+#define AXIS2_SERVO_VELOCITY_MAX        90
+#define AXIS2_SERVO_ACCELERATION        40
+#define AXIS2_SERVO_P                   40
+#define AXIS2_SERVO_I                   30
+#define AXIS2_SERVO_D                   20
 #define AXIS2_PID_P_GOTO                30
 #define AXIS2_PID_I_GOTO                20
 #define AXIS2_PID_D_GOTO                10
-#define AXIS2_PID_SENSITIVITY		25 // a setting of 0 now switches between PID and PID_GOTO when slews start/stop instead of continuously variable based on so % of the power/velocity.
+#define AXIS2_PID_SENSITIVITY		        0 // a setting of 0 now switches between PID and PID_GOTO when slews start/stop instead of continuously variable based on so % of the power/velocity.
 #define AXIS2_ENCODER                   AB
 // end mesu-200 specifics
 
@@ -212,7 +211,7 @@
 
 // GUIDING BEHAVIOUR ------------------------------------------ see https://onstep.groups.io/g/main/wiki/Configuration_Mount#GUIDING
 #define GUIDE_TIME_LIMIT               10 //     10, n. Time limit n=0..120 seconds. Use 0 to disable.                        Adjust
-#define GUIDE_DISABLE_BACKLASH        OFF //    OFF, Disable backlash takeup during guiding at <= 1X.                         Option
+#define GUIDE_DISABLE_BACKLASH         ON //    OFF, Disable backlash takeup during guiding at <= 1X.                         Option
 
 // LIMITS ------------------------------------------------------ see https://onstep.groups.io/g/main/wiki/Configuration_Mount#LIMITS
 #define LIMIT_SENSE                   OFF //    OFF, HIGH or LOW state on limit sense switch stops movement.                  Option
