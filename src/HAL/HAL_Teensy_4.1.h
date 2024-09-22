@@ -15,13 +15,26 @@
   #define ANALOG_READ_RANGE 1023
 #endif
 #ifndef ANALOG_WRITE_RANGE
-  #define ANALOG_WRITE_RANGE 8191
+  //#define ANALOG_WRITE_RANGE 8191
+  //#define ANALOG_WRITE_RANGE 16383
+  #define ANALOG_WRITE_RANGE 32767
 #endif
 #ifndef ANALOG_WRITE_PWM_BITS
-  #define ANALOG_WRITE_PWM_BITS 13 // up to 15 bits
+  //#define ANALOG_WRITE_PWM_BITS 13 // up to 15 bits
+  //#define ANALOG_WRITE_PWM_BITS 14 // up to 15 bits
+  #define ANALOG_WRITE_PWM_BITS 15 // up to 15 bits
 #endif
 #ifndef ANALOG_WRITE_PWM_FREQUENCY
-  #define ANALOG_WRITE_PWM_FREQUENCY 18310.55
+//  #define ANALOG_WRITE_PWM_FREQUENCY 18310.55
+  //#define ANALOG_WRITE_PWM_FREQUENCY 9155.27
+  //#define ANALOG_WRITE_PWM_FREQUENCY 4577.64
+  //#define ANALOG_WRITE_PWM_FREQUENCY 2288.82
+  //#define ANALOG_WRITE_PWM_FREQUENCY 1144.41
+  #define ANALOG_WRITE_PWM_FREQUENCY 572.205
+  //#define ANALOG_WRITE_PWM_FREQUENCY 286.1025
+  //#define ANALOG_WRITE_PWM_FREQUENCY 143.05125
+  //#define ANALOG_WRITE_PWM_FREQUENCY 71.525625
+  //#define ANALOG_WRITE_PWM_FREQUENCY 17.88140625
 #endif
 
 // Lower limit (fastest) step rate in uS for this platform (in SQW mode) and width of step pulse
