@@ -887,7 +887,7 @@
 #define AXIS3_SLEW_RATE_BASE_DESIRED  3.0                         // in degrees/sec
 #endif
 #ifndef AXIS3_ACCELERATION_TIME
-#define AXIS3_ACCELERATION_TIME       2.0                         // in seconds, to selected rate
+#define AXIS3_ACCELERATION_TIME       1.0                         // in seconds, to selected rate
 #endif
 #ifndef AXIS3_RAPID_STOP_TIME
 #define AXIS3_RAPID_STOP_TIME         1.0                         // in seconds, to stop
@@ -1081,7 +1081,7 @@
 #define AXIS4_SLEW_RATE_BASE_DESIRED  500                         // in microns/sec
 #endif
 #ifndef AXIS4_ACCELERATION_TIME
-#define AXIS4_ACCELERATION_TIME       2.0                         // in seconds, to selected rate
+#define AXIS4_ACCELERATION_TIME       1.0                         // in seconds, to selected rate
 #endif
 #ifndef AXIS4_RAPID_STOP_TIME
 #define AXIS4_RAPID_STOP_TIME         1.0                         // in seconds, to stop
@@ -1097,6 +1097,9 @@
 #endif
 #ifndef AXIS4_SYNC_THRESHOLD
 #define AXIS4_SYNC_THRESHOLD          OFF
+#endif
+#ifndef AXIS4_HOME_DEFAULT
+#define AXIS4_HOME_DEFAULT            MIDDLE                      // use MINIMUM (zero), MIDDLE (half travel), MAXIMUM (full travel), or a position in microns
 #endif
 #ifndef AXIS4_SENSE_HOME
 #define AXIS4_SENSE_HOME              OFF
@@ -1249,7 +1252,7 @@
 #define AXIS5_SLEW_RATE_BASE_DESIRED  500
 #endif
 #ifndef AXIS5_ACCELERATION_TIME
-#define AXIS5_ACCELERATION_TIME       2.0
+#define AXIS5_ACCELERATION_TIME       1.0
 #endif
 #ifndef AXIS5_RAPID_STOP_TIME
 #define AXIS5_RAPID_STOP_TIME         1.0
@@ -1265,6 +1268,9 @@
 #endif
 #ifndef AXIS5_SYNC_THRESHOLD
 #define AXIS5_SYNC_THRESHOLD          OFF
+#endif
+#ifndef AXIS5_HOME_DEFAULT
+#define AXIS5_HOME_DEFAULT            MIDDLE
 #endif
 #ifndef AXIS5_SENSE_HOME
 #define AXIS5_SENSE_HOME              OFF
@@ -1417,7 +1423,7 @@
 #define AXIS6_SLEW_RATE_BASE_DESIRED  500
 #endif
 #ifndef AXIS6_ACCELERATION_TIME
-#define AXIS6_ACCELERATION_TIME       2.0
+#define AXIS6_ACCELERATION_TIME       1.0
 #endif
 #ifndef AXIS6_RAPID_STOP_TIME
 #define AXIS6_RAPID_STOP_TIME         1.0
@@ -1433,6 +1439,9 @@
 #endif
 #ifndef AXIS6_SYNC_THRESHOLD
 #define AXIS6_SYNC_THRESHOLD          OFF
+#endif
+#ifndef AXIS6_HOME_DEFAULT
+#define AXIS6_HOME_DEFAULT            MIDDLE
 #endif
 #ifndef AXIS6_SENSE_HOME
 #define AXIS6_SENSE_HOME              OFF
@@ -1585,7 +1594,7 @@
 #define AXIS7_SLEW_RATE_BASE_DESIRED  500
 #endif
 #ifndef AXIS7_ACCELERATION_TIME
-#define AXIS7_ACCELERATION_TIME       2.0
+#define AXIS7_ACCELERATION_TIME       1.0
 #endif
 #ifndef AXIS7_RAPID_STOP_TIME
 #define AXIS7_RAPID_STOP_TIME         1.0
@@ -1601,6 +1610,9 @@
 #endif
 #ifndef AXIS7_SYNC_THRESHOLD
 #define AXIS7_SYNC_THRESHOLD          OFF
+#endif
+#ifndef AXIS7_HOME_DEFAULT
+#define AXIS7_HOME_DEFAULT            MIDDLE
 #endif
 #ifndef AXIS7_SENSE_HOME
 #define AXIS7_SENSE_HOME              OFF
@@ -1753,7 +1765,7 @@
 #define AXIS8_SLEW_RATE_BASE_DESIRED  500
 #endif
 #ifndef AXIS8_ACCELERATION_TIME
-#define AXIS8_ACCELERATION_TIME       2.0
+#define AXIS8_ACCELERATION_TIME       1.0
 #endif
 #ifndef AXIS8_RAPID_STOP_TIME
 #define AXIS8_RAPID_STOP_TIME         1.0
@@ -1769,6 +1781,9 @@
 #endif
 #ifndef AXIS8_SYNC_THRESHOLD
 #define AXIS8_SYNC_THRESHOLD          OFF
+#endif
+#ifndef AXIS8_HOME_DEFAULT
+#define AXIS8_HOME_DEFAULT            MIDDLE
 #endif
 #ifndef AXIS8_SENSE_HOME
 #define AXIS8_SENSE_HOME              OFF
@@ -1921,7 +1936,7 @@
 #define AXIS9_SLEW_RATE_BASE_DESIRED  500
 #endif
 #ifndef AXIS9_ACCELERATION_TIME
-#define AXIS9_ACCELERATION_TIME       2.0
+#define AXIS9_ACCELERATION_TIME       1.0
 #endif
 #ifndef AXIS9_RAPID_STOP_TIME
 #define AXIS9_RAPID_STOP_TIME         1.0
@@ -1937,6 +1952,9 @@
 #endif
 #ifndef AXIS9_SYNC_THRESHOLD
 #define AXIS9_SYNC_THRESHOLD          OFF
+#endif
+#ifndef AXIS9_HOME_DEFAULT
+#define AXIS9_HOME_DEFAULT            MIDDLE
 #endif
 #ifndef AXIS9_SENSE_HOME
 #define AXIS9_SENSE_HOME              OFF
@@ -2191,6 +2209,9 @@
 #ifndef FEATURE1_VALUE_DEFAULT
 #define FEATURE1_VALUE_DEFAULT        OFF                         // OUTPUT control pin default value/state ON, OFF, 0..255
 #endif
+#ifndef FEATURE1_VALUE_MEMORY
+#define FEATURE1_VALUE_MEMORY         OFF                         // ON remembers feature value across power cycles
+#endif
 #ifndef FEATURE1_ON_STATE
 #define FEATURE1_ON_STATE             HIGH                        // OUTPUT control pin ON (active) state
 #endif
@@ -2209,6 +2230,9 @@
 #endif
 #ifndef FEATURE2_VALUE_DEFAULT
 #define FEATURE2_VALUE_DEFAULT        OFF
+#endif
+#ifndef FEATURE2_VALUE_MEMORY
+#define FEATURE2_VALUE_MEMORY         OFF
 #endif
 #ifndef FEATURE2_ON_STATE
 #define FEATURE2_ON_STATE             HIGH
@@ -2229,6 +2253,9 @@
 #ifndef FEATURE3_VALUE_DEFAULT
 #define FEATURE3_VALUE_DEFAULT        OFF
 #endif
+#ifndef FEATURE3_VALUE_MEMORY
+#define FEATURE3_VALUE_MEMORY         OFF
+#endif
 #ifndef FEATURE3_ON_STATE
 #define FEATURE3_ON_STATE             HIGH
 #endif
@@ -2247,6 +2274,9 @@
 #endif
 #ifndef FEATURE4_VALUE_DEFAULT
 #define FEATURE4_VALUE_DEFAULT        OFF
+#endif
+#ifndef FEATURE4_VALUE_MEMORY
+#define FEATURE4_VALUE_MEMORY         OFF
 #endif
 #ifndef FEATURE4_ON_STATE
 #define FEATURE4_ON_STATE             HIGH
@@ -2267,6 +2297,9 @@
 #ifndef FEATURE5_VALUE_DEFAULT
 #define FEATURE5_VALUE_DEFAULT        OFF
 #endif
+#ifndef FEATURE5_VALUE_MEMORY
+#define FEATURE5_VALUE_MEMORY         OFF
+#endif
 #ifndef FEATURE5_ON_STATE
 #define FEATURE5_ON_STATE             HIGH
 #endif
@@ -2285,6 +2318,9 @@
 #endif
 #ifndef FEATURE6_VALUE_DEFAULT
 #define FEATURE6_VALUE_DEFAULT        OFF
+#endif
+#ifndef FEATURE6_VALUE_MEMORY
+#define FEATURE6_VALUE_MEMORY         OFF
 #endif
 #ifndef FEATURE6_ON_STATE
 #define FEATURE6_ON_STATE             HIGH
@@ -2305,6 +2341,9 @@
 #ifndef FEATURE7_VALUE_DEFAULT
 #define FEATURE7_VALUE_DEFAULT        OFF
 #endif
+#ifndef FEATURE7_VALUE_MEMORY
+#define FEATURE7_VALUE_MEMORY         OFF
+#endif
 #ifndef FEATURE7_ON_STATE
 #define FEATURE7_ON_STATE             HIGH
 #endif
@@ -2323,6 +2362,9 @@
 #endif
 #ifndef FEATURE8_VALUE_DEFAULT
 #define FEATURE8_VALUE_DEFAULT        OFF
+#endif
+#ifndef FEATURE8_VALUE_MEMORY
+#define FEATURE8_VALUE_MEMORY         OFF
 #endif
 #ifndef FEATURE8_ON_STATE
 #define FEATURE8_ON_STATE             HIGH
