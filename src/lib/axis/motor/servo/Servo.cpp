@@ -381,8 +381,12 @@ void ServoMotor::poll() {
 //      sprintf(s, "Servo%d_Delta: %6ld, Motor %6ld, Encoder %6ld, Servo%d_Power: %6.3f%%\r\n", (int)axisNumber, (motorCounts - encoderCounts), motorCounts, (long)encoderCounts, (int)axisNumber, velocityPercent);
 //      sprintf(s, "Servo%d: Motor %6ld, Encoder %6ld\r\n", (int)axisNumber, motorCounts, (long)encoderCounts);
 //      sprintf(s, "Servo%d: Delta %0.2f\r\n", (int)axisNumber, (motorCounts - (long)encoderCounts)/12.9425);
-      sprintf(s, "Servo%d: DeltaASf: %0.2f, DeltaAS: %0.2f, Servo%d_Power: %6.3f%%\r\n", (int)axisNumber, (motorCounts - encoderCounts)/spas, (motorCounts - unfilteredEncoderCounts)/spas, (int)axisNumber, velocityPercent);
-
+//      sprintf(s, "Servo%d: DeltaASf: %0.3f, DeltaAS: %0.3f, Servo%d_Power: %6.3f%%\r\n", (int)axisNumber, (motorCounts - encoderCounts)/spas, (motorCounts - unfilteredEncoderCounts)/spas, (int)axisNumber, velocityPercent);
+      //sprintf(s, "Servo%d: Servo%d_Power: %6.3f%%\r\n", (int)axisNumber, (int)axisNumber, velocityPercent);
+        //Serial.print((long) motorCounts - encoderCounts);
+        //Serial.print(", ");
+        //Serial.println(velocityPercent);
+        sprintf(s, "%ld, %6.3f%%\r\n", (motorCounts - (long)encoderCounts) , velocityPercent);
         D(s);
         UNUSED(spas);
       }
