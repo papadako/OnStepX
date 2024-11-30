@@ -5,7 +5,8 @@
 
 #ifdef SERVO_DC_PRESENT
 
-#if defined(ARDUINO_TEENSY41) && defined(AXIS1_STEP_PIN) && AXIS1_STEP_PIN == 38 && defined(SERVO_ANALOG_WRITE_FREQUENCY)
+// For MaxPCB4Mesu we have changed the pinmaps. There is no need for the analogWritePin38
+#if PINMAP != MaxPCB4Mesu && defined(ARDUINO_TEENSY41) && defined(AXIS1_STEP_PIN) && AXIS1_STEP_PIN == 38 && defined(SERVO_ANALOG_WRITE_FREQUENCY)
   // this is only for pin 38 of a Teensy4.1
   IntervalTimer itimer4;
   uint16_t _pwm38_period = 0;
