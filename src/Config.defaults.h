@@ -613,6 +613,9 @@
 #ifndef MOUNT_AUTO_HOME_DEFAULT
 #define MOUNT_AUTO_HOME_DEFAULT       OFF                         // ON default find home at boot
 #endif
+#ifndef MOUNT_HOME_AT_OFFSETS
+#define MOUNT_HOME_AT_OFFSETS         OFF                         // ON to incorporate runtime offsets into home position (switches)
+#endif
 #ifndef MOUNT_HORIZON_AVOIDANCE
 #define MOUNT_HORIZON_AVOIDANCE       ON                          // ON allows eq mode horizon avoidance
 #endif
@@ -778,7 +781,10 @@
 
 // tracking
 #ifndef TRACK_AUTOSTART
-#define TRACK_AUTOSTART               OFF
+#define TRACK_AUTOSTART               OFF                         // begin tracking at startup
+#endif
+#ifndef TRACK_WITHOUT_LIMITS
+#define TRACK_WITHOUT_LIMITS          OFF                         // allow tracking even if limits are disabled
 #endif
 #ifndef TRACK_COMPENSATION_DEFAULT
 #define TRACK_COMPENSATION_DEFAULT    OFF
