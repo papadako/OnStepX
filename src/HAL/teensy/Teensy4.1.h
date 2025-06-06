@@ -20,6 +20,9 @@
 #ifndef ANALOG_WRITE_RANGE
   #define ANALOG_WRITE_RANGE 255
 #endif
+#ifndef SERVO_ANALOG_WRITE_FREQUENCY
+  #define SERVO_ANALOG_WRITE_FREQUENCY 18310.55
+#endif
 
 // Lower limit (fastest) step rate in uS for this platform (in SQW mode) and width of step pulse
 #define HAL_MAXRATE_LOWER_LIMIT 1.5
