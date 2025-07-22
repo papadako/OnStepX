@@ -1,0 +1,12 @@
+// Mappings for the current mesu-200 MAXPCB4 controller
+// George Korres and Panagiotis Papadakos modifications
+
+#define AXIS1_ENCODER_A_PIN     AXIS1_DIR_PIN   //AXIS1_M0_PIN
+#define AXIS1_ENCODER_B_PIN     AXIS1_STEP_PIN  //AXIS1_M1_PIN
+#define AXIS1_SERVO_PH1_PIN     AXIS1_M0_PIN    //AXIS1_DIR_PIN
+#define AXIS1_SERVO_PH2_PIN     AXIS1_M1_PIN    //AXIS1_STEP_PIN
+
+#define AXIS2_ENCODER_A_PIN     AXIS2_DIR_PIN   //AXIS2_M0_PIN
+#define AXIS2_ENCODER_B_PIN     AXIS2_STEP_PIN  //AXIS2_M1_PIN
+#define AXIS2_SERVO_PH1_PIN     AXIS2_M2_PIN    //AXIS2_DIR_PIN
+#define AXIS2_SERVO_PH2_PIN     AXIS2_M1_PIN    //AXIS2_STEP_PIN

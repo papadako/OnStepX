@@ -35,6 +35,11 @@
   #define PINMAP_STR "MaxPCB v4"
   #include "Pins.MaxPCB4.h"
 #endif
+#if PINMAP == MaxPCB4Mesu
+  #define PINMAP_STR "MaxPCB v4 Mesu 200 - PP & Korres"
+  #include "Pins.MaxPCB4.h"
+  #include "Pins.Mesu200.h"
+#endif
 #if PINMAP == MaxESP3
   #define PINMAP_STR "MaxESP v3"
   #include "Pins.MaxESP3.h"
