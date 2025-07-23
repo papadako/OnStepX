@@ -6,6 +6,8 @@
     AXIS4_ENCODER != OFF || AXIS5_ENCODER != OFF || AXIS6_ENCODER != OFF || \
     AXIS7_ENCODER != OFF || AXIS8_ENCODER != OFF || AXIS9_ENCODER != OFF
 
+#include "Arduino.h"
+
 // get device ready for use
 bool Encoder::init() {
   return true;
@@ -38,6 +40,9 @@ bool Encoder::errorThresholdExceeded() {
 
   totalWarningCount += warn;
   warn = 0;
+
+  // look at how often warnings occur on a given axis
+  // if (axis == 1) { D1("WRN: Encoder"); D1(axis); D1(" warning, count at "); DL1(totalWarningCount); }
 
   bool errorState = errorCount > ENCODER_ERROR_COUNT_THRESHOLD;
 
