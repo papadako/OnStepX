@@ -67,10 +67,7 @@
   // once a signal state changes don't allow the ISR to run again for ENCODER_FILTER nanoseconds
   // it would be even better to create a low-res millis counter outside of this routine and just access the variable here
   #define ENCODER_FILTER_UNTIL(n) \
-    static uint32_t nsNext = 0;  \
-    static uint32_t nsInvalidMillis = 0; \
     uint32_t nsNow = nanoseconds(); \
-    uint32_t msNow = millis(); \
     if ((long)(msNow - nsInvalidMillis) < 0 && (long)(nsNow - nsNext) < 0) return; \
     nsNext = nsNow + n; \
     nsInvalidMillis = msNow + 1000;
@@ -78,6 +75,12 @@
   // or, a less optimal alternative when a reasonably functional delayNanoseconds() is available...
   // once a signal state changes wait in the ISR for ENCODER_FILTER nanoseconds to let the signal stabalize
   // #define ENCODER_FILTER_UNTIL(n) delayNanoseconds(n);
+#endif
+
+// signal mode for pulse and cw/ccw encoders, default CHANGE or RISING or FALLING
+// quadrature encoders
+#ifndef ENCODER_SIGNAL_MODE
+  #define ENCODER_SIGNAL_MODE CHANGE
 #endif
 
 #if AXIS1_ENCODER != OFF || AXIS2_ENCODER != OFF || AXIS3_ENCODER != OFF || \
@@ -104,14 +107,17 @@ class Encoder {
     // set the virtual encoder direction (-1 is reverse, 1 is forward)
     virtual void setDirection(volatile int8_t *direction) { UNUSED(direction); }
 
-    // check for error state
-    virtual bool errorThresholdExceeded();
+    // check error state
+    virtual bool errorThresholdExceeded() { return errorState; }
+
+    // update encoder status
+    void poll();
 
     // total number of errors
-    int32_t totalErrorCount = 0;
+    uint32_t totalErrorCount = 0;
 
     // total number of warnings
-    int32_t totalWarningCount = 0;
+    uint32_t totalWarningCount = 0;
 
     // true if encoder count is ready
     bool ready = false;
@@ -133,17 +139,26 @@ class Encoder {
     int16_t axis = 0;
 
     // accumulator for warning detection
-    volatile int32_t warn = 0;
+    volatile uint32_t warn = 0;
 
     // accumulator for error detection
-    volatile int32_t error = 0;
+    volatile uint32_t error = 0;
 
-    // number of errors (resets once a minute)
-    int32_t errorCount = 0;
+    // number of errors over the last minute
+    uint16_t errorCount[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-    // keep track of when the error state changes
+    // keep track of the error state
+    bool errorState = false;
     bool lastErrorState = false;
-    unsigned long lastMinute = 0;
+    uint16_t tick = UINT16_MAX;
+    uint16_t errorCountIndex = UINT16_MAX;
+
+    #if ENCODER_FILTER > 0
+      // approximate time keeping for filtering
+      volatile uint32_t msNow = 0;
+      volatile uint32_t nsNext = 0;
+      volatile uint32_t nsInvalidMillis = 0;
+    #endif
 };
 
 #endif

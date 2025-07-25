@@ -66,6 +66,7 @@ Quadrature::Quadrature(int16_t APin, int16_t BPin, int16_t axis) {
 
 bool Quadrature::init() {
   if (ready) return true;
+  if (!Encoder::init()) return false;
 
   pinMode(APin, INPUT_PULLUP);
   pinMode(BPin, INPUT_PULLUP);
@@ -171,34 +172,29 @@ ICACHE_RAM_ATTR void Quadrature::A(const int16_t pin) {
     ENCODER_FILTER_UNTIL(ENCODER_FILTER);
   #endif
   stateA = digitalReadF(pin);
-  #if defined(ENCODER_FILTER) && ENCODER_FILTER != OFF
-    if (stateA == lastA) { warn++; return; }
-  #endif
 
   uint8_t v = (stateA<<3) + (stateB<<2) + (lastA<<1) + lastB;
-  static int16_t dir;
   switch (v) {
-    case 0b0000: dir = 0; error++; break; // skipped pulse use last dir (way too fast if this is happening)
+    case 0b0000: QUAD_F2; break; // skipped pulse (invalid A state, valid B state)
     case 0b0001: dir = -1; break;
     case 0b0010: dir = 1; break;
-    case 0b0011: warn++; break;           // skipped pulse use last dir
+    case 0b0011: QUAD_F1; break; // skipped pulse (valid A state, impossible B state)
     case 0b0100: dir = 1; break;
-    case 0b0101: dir = 0; error++; break; // skipped pulse use last dir (way too fast if this is happening)
-    case 0b0110: warn++; break;           // skipped pulse use last dir
+    case 0b0101: QUAD_F2; break; // skipped pulse (invalid A state, valid B state)
+    case 0b0110: QUAD_F1; break; // skipped pulse (valid A state, impossible B state)
     case 0b0111: dir = -1; break;
     case 0b1000: dir = -1; break;
-    case 0b1001: warn++; break;           // skipped pulse use last dir
-    case 0b1010: dir = 0; error++; break; // skipped pulse use last dir (way too fast if this is happening)
+    case 0b1001: QUAD_F1; break; // skipped pulse (valid A state, impossible B state)
+    case 0b1010: QUAD_F2; break; // skipped pulse (invalid A state, valid B state)
     case 0b1011: dir = 1; break;
-    case 0b1100: warn++; break;           // skipped pulse use last dir
+    case 0b1100: QUAD_F1; break; // skipped pulse (valid A state, impossible B state)
     case 0b1101: dir = 1; break;
     case 0b1110: dir = -1; break;
-    case 0b1111: dir = 0; error++; break; // skipped pulse use last dir (way too fast if this is happening)
+    case 0b1111: QUAD_F2; break; // skipped pulse (invalid A state, valid B state)
   }
   quadratureCount += dir;
   
   lastA = stateA;
-  lastB = stateB;
 }
 
 ICACHE_RAM_ATTR void Quadrature::B(const int16_t pin) {
@@ -206,34 +202,28 @@ ICACHE_RAM_ATTR void Quadrature::B(const int16_t pin) {
     ENCODER_FILTER_UNTIL(ENCODER_FILTER);
   #endif
   stateB = digitalReadF(pin);
-  #if ENCODER_FILTER != OFF
-    // stateB should NEVER be the same as lastB, else the interrupt wouldn't have occured
-    if (stateB == lastB) { warn++; return; }
-  #endif
 
   uint8_t v = (stateA<<3) + (stateB<<2) + (lastA<<1) + lastB;
-  static int16_t dir;
   switch (v) {
-    case 0b0000: dir = 0; error++; break;
+    case 0b0000: QUAD_F2; break;  // skipped pulse (valid A state, invalid B state)
     case 0b0001: dir = -1; break;
     case 0b0010: dir = 1; break;
-    case 0b0011: warn++; break;
+    case 0b0011: QUAD_F1; break;  // skipped pulse (impossible A state, valid B state)
     case 0b0100: dir = 1; break;
-    case 0b0101: dir = 0; error++; break;
-    case 0b0110: warn++; break;
+    case 0b0101: QUAD_F2; break;  // skipped pulse (valid A state, invalid B state)
+    case 0b0110: QUAD_F1; break;  // skipped pulse (impossible A state, valid B state)
     case 0b0111: dir = -1; break;
     case 0b1000: dir = -1; break;
-    case 0b1001: warn++; break;
-    case 0b1010: dir = 0; error++; break;
+    case 0b1001: QUAD_F1; break;  // skipped pulse (impossible A state, valid B state)
+    case 0b1010: QUAD_F2; break;  // skipped pulse (valid A state, invalid B state)
     case 0b1011: dir = 1; break;
-    case 0b1100: warn++; break;
+    case 0b1100: QUAD_F1; break;  // skipped pulse (impossible A state, valid B state)
     case 0b1101: dir = 1; break;
     case 0b1110: dir = -1; break;
-    case 0b1111: dir = 0; error++; break;
+    case 0b1111: QUAD_F2; break;  // skipped pulse (valid A state, invalid B state)
   }
   quadratureCount += dir;
-  
-  lastA = stateA;
+
   lastB = stateB;
 }
 
