@@ -262,9 +262,9 @@ Electrical time constant τ_e = L/R = 0.77mH / 7.36Ω ≈ 0.105ms
 PWM frequency 4.577 kHz
 Encoder CPR	1000 (quadrature → 4000 counts/motorrev)
 Gear ratio 1991.07:1
-RA resolution	7,964,280 steps/rev
+DEC resolution	7,964,280 steps/rev
 
-​We want 1 RA revolution per sidereal day = 86164.091 s
+​We want 1 DEC revolution per sidereal day = 86164.091 s
 Motor rev/sec = 1 /86164.0911 * 1991.07 ≈  0.023107 rev/sec
 6910 RPM = 115.17 rev/s @ 24 V (We assume voltage affects speed linearly)
 8890 RPM = 148.16 rev/s @ 24 V (We assume voltage affects speed linearly)
@@ -296,7 +296,7 @@ frequency != 0 ? ... : 0	            Ensures zero output when pid should take ca
 
 */
 
-#define AXIS2_SERVO_VF_MAX_FREQ 180    // 180 ≈ 2 * 89.73 (2x sidereal in encoder steps max frequency that uses VF)
+#define AXIS2_SERVO_VF_MAX_FREQ 185    // 185 ≈ 2 * 92.45 (2x sidereal in encoder steps max frequency that uses VF)
 #define AXIS2_SERVO_VF_GAIN     10.87  // motor pwm units per second / encoder steps per second in 1x sidereal
 #define AXIS2_SERVO_VF_OFFSET   100    // the least pwm units for a movement
 #define AXIS2_SERVO_VF_MAX_PWM  1939.47 // ~ around 1.5 sidereal loaded  (correlated also to AXIS2_SERVO_VF_MAX_FREQ)
