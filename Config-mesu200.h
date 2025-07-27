@@ -155,11 +155,11 @@ frequency != 0 ? ... : 0	            Ensures zero output when pid should take ca
 #define AXIS1_SERVO_VF_MAX_FREQ 180    // 180 ≈ 2 * 89.73 (2x sidereal in encoder steps max frequency that uses VF)
 #define AXIS1_SERVO_VF_GAIN     10.87  // motor pwm units per second / encoder steps per second in 1x sidereal
 #define AXIS1_SERVO_VF_OFFSET   100    // the least pwm units for a movement
-#define AXIS1_SERVO_VF_MAX_PWM  1882.95 // ~ around 1.5 sidereal loaded  (correlated also to AXIS1_SERVO_VF_MAX_FREQ)
+//#define AXIS1_SERVO_VF_MAX_PWM  1882.95 // ~ around 1.5 sidereal loaded  (correlated also to AXIS1_SERVO_VF_MAX_FREQ)
 
 #define AXIS1_SERVO_VELOCITY_FACTOR ( \
   (abs(frequency) < AXIS1_SERVO_VF_MAX_FREQ && abs(frequency) > 0.0) ? \
-    copysign(min(max(abs(frequency * AXIS1_SERVO_VF_GAIN), AXIS1_SERVO_VF_OFFSET), AXIS1_SERVO_VF_MAX_PWM), frequency) : 0 \
+    copysign((max(abs(frequency * AXIS1_SERVO_VF_GAIN), AXIS1_SERVO_VF_OFFSET)), frequency) : 0 \
 )
 
 //#define AXIS1_SERVO_VELOCITY_FACTOR 0
@@ -297,13 +297,14 @@ frequency != 0 ? ... : 0	            Ensures zero output when pid should take ca
 */
 
 #define AXIS2_SERVO_VF_MAX_FREQ 185    // 185 ≈ 2 * 92.45 (2x sidereal in encoder steps max frequency that uses VF)
-#define AXIS2_SERVO_VF_GAIN     10.87  // motor pwm units per second / encoder steps per second in 1x sidereal
+//#define AXIS2_SERVO_VF_GAIN     10.87  // motor pwm units per second / encoder steps per second in 1x sidereal
+#define AXIS2_SERVO_VF_GAIN     12.42785  // motor pwm units per second / encoder steps per second in 1x sidereal - 12.42785 is the mean of loaded/unloaded
 #define AXIS2_SERVO_VF_OFFSET   100    // the least pwm units for a movement
-#define AXIS2_SERVO_VF_MAX_PWM  1939.47 // ~ around 1.5 sidereal loaded  (correlated also to AXIS2_SERVO_VF_MAX_FREQ)
+//#define AXIS2_SERVO_VF_MAX_PWM  1939.47 // ~ around 1.5 sidereal loaded  (correlated also to AXIS2_SERVO_VF_MAX_FREQ)
 
 #define AXIS2_SERVO_VELOCITY_FACTOR ( \
   (abs(frequency) < AXIS2_SERVO_VF_MAX_FREQ && abs(frequency) > 0.0) ? \
-    copysign(min(max(abs(frequency * AXIS2_SERVO_VF_GAIN), AXIS2_SERVO_VF_OFFSET), AXIS2_SERVO_VF_MAX_PWM), frequency) : 0 \
+    copysign((max(abs(frequency * AXIS2_SERVO_VF_GAIN), AXIS2_SERVO_VF_OFFSET)), frequency) : 0 \
 )
 
 
