@@ -22,7 +22,7 @@
 #define DEBUG                         OFF //    OFF, Use ON for background error messages only, use VERBOSE for all           Infreq
                                           //         error and status messages, use CONSOLE for VT100 debug console,
                                           //         or use PROFILER for VT100 task profiler.
-#define DEBUG_SERVO                   OFF //    OFF, n. Where n=1 to 9 as the designated axis for logging servo activity.     Option
+#define DEBUG_SERVO                   0 //    OFF, n. Where n=1 to 9 as the designated axis for logging servo activity.     Option
 #define DEBUG_ECHO_COMMANDS           OFF //    OFF, Use ON or ERRORS_ONLY to log commands to the debug serial port.          Option
 #define SERIAL_DEBUG               Serial // Serial, Use any available h/w serial port. Serial1 or Serial2, etc.              Option  
 #define SERIAL_DEBUG_BAUD          115200 // 230400, n. Where n=9600,19200,576cd .00,115200,230400,460800 (common baud rates.)    Option

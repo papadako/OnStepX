@@ -73,7 +73,7 @@
 // sampling 10000 (default)
 // rule of thumb around 1/10 of PWM period
 //#define PID_SAMPLE_TIME_US            2500 // for PWM of 2.288KHz
-#define PID_SAMPLE_TIME_US            2000 // for PWM of 4.577KHz
+#define PID_SAMPLE_TIME_US            1200 // for PWM of 4.577KHz
 
 // Driver models (Step/Dir and Servo) many have specific requirements so be sure to follow the link below to help learn about these.
 // Typically: A4988, DRV8825, LV8729, S109, TMC2130, TMC5160, TMC2209, etc.
@@ -103,60 +103,19 @@
 #define AXIS1_SERVO_ACCELERATION      100 
 
 /*
-FEED FORWARD control when guiding - Keep PID for cleanubg-up things (avoid jumps during guiding)           
-
-MOTOR A-max 26 Ø26 mm, Graphite Brushes, 11 Watt, with cables 353611
-https://www.maxongroup.com/maxon/view/product/353611
-Inductance (L): 0.77 mH
-Resistance (R): 7.36 Ω
-Mechanical time constant (τm): 14.7 ms
-Torque constant (Kt): 25.5 mNm/A
-No load speed	8890 RPM @ 24 V
-Maxon nominal speed	6910 RPM @ 24 V
-Electrical time constant τ_e = L/R = 0.77mH / 7.36Ω ≈ 0.105ms
-
-PWM frequency 4.577 kHz
-Encoder CPR	1000 (quadrature → 4000 counts/motorrev)
-Gear ratio 1932.84:1
-RA resolution	7,731,360 steps/rev
-
-​We want 1 RA revolution per sidereal day = 86164.091 s
-Motor rev/sec = 1 /86164.0911 * 1932.84 ≈  0.02243 rev/sec
-6910 RPM = 115.17 rev/s @ 24 V (We assume voltage affects speed linearly)
-8890 RPM = 148.16 rev/s @ 24 V (We assume voltage affects speed linearly)
-K_v_load =  115.17 / 24 =  4.7988 rev/s per volt
-K_v_unload =  148.16 / 24 =  6.1733 rev/s per volt
-
-Voltage required to get 0.02243 rev/s:
-𝑉_avg_load = 0.02243 / 4.7988 ≈ 0.00467408518
-𝑉_avg_unload = 0.02243 / 6.1733 ≈ 0.00363338894
-
-Duty cycle load = 0.00467408518 / 12.2 = 0.00038312173 = 0.03831%
-Duty cycle unload = 0.00363338894 / 12.2 = 0.00029781876 = 0.02978%
-​
-PWM resolution (ANALOG_WRITE_RANGE)	             15-bit → 0–32767
-Target duty cycle loaded	                           3.831%
-Target duty cycle unloaded	                           2.978%
-PWM_loaded	                                   ~1255.3 PWM units
-PWM_unloaded	                                   ~975.86 PWM units
-Encoder ticks/sec at sidereal	                        89.73
-
-Compute Velocity Factor:
-VF gain loaded = 1255.3 / 89.73 ≈ 13.9897
-VF gain unloaded = 975.86 / 89.73 ≈ 10.87
-frequency * VF gain	                  Linearly maps encoder rate to PWM, frequency is in encoder_steps/sec
-+ 100.0	                              Lowest pwm unit offset to overcome stiction/friction
-min(..., AXIS1_SERVO_VF_MAX_PWM)	      Clamp PWM to 1.5x loaded sidereal to avoid doing jumps
-copysign(..., frequency)	            Maintains direction (forward/reverse)
-frequency != 0 ? ... : 0	            Ensures zero output when pid should take care or idle
+    FEED FORWARD control when guiding - Keep PID for cleaning-up things (avoid jumps during guiding)           
+    MOTOR A-max 26 Ø26 mm, Graphite Brushes, 11 Watt, with cables 353611
+    https://www.maxongroup.com/maxon/view/product/353611
+    Check my spreadsheet
+    https://docs.google.com/spreadsheets/d/1TqrqgvhcozHfmjiFhKQ-0Jokc9Dp3P1-cK787SRMrFQ/edit?usp=sharing
 
 */
 
-#define AXIS1_SERVO_VF_MAX_FREQ 180    // 180 ≈ 2 * 89.73 (2x sidereal in encoder steps max frequency that uses VF)
-#define AXIS1_SERVO_VF_GAIN     10.87  // motor pwm units per second / encoder steps per second in 1x sidereal
-#define AXIS1_SERVO_VF_OFFSET   100    // the least pwm units for a movement
-//#define AXIS1_SERVO_VF_MAX_PWM  1882.95 // ~ around 1.5 sidereal loaded  (correlated also to AXIS1_SERVO_VF_MAX_FREQ)
+#define AXIS1_SERVO_VF_MAX_FREQ 224.325  // 2.5x sidereal in encoder steps max frequency that uses VF
+#define AXIS1_SERVO_VF_GAIN     506.11    // motor pwm units per second / encoder steps per second in 1x sidereal 
+#define AXIS1_SERVO_VF_OFFSET   100      // the least pwm units for a movement
 
+// frequency * VF gain Linearly maps encoder rate to PWM, frequency is in encoder_steps/sec
 #define AXIS1_SERVO_VELOCITY_FACTOR ( \
   (abs(frequency) < AXIS1_SERVO_VF_MAX_FREQ && abs(frequency) > 0.0) ? \
     copysign((max(abs(frequency * AXIS1_SERVO_VF_GAIN), AXIS1_SERVO_VF_OFFSET)), frequency) : 0 \
@@ -170,9 +129,9 @@ frequency != 0 ? ... : 0	            Ensures zero output when pid should take ca
 //#define AXIS1_SERVO_D                 3
 
 // PWM 2 & 4 KHz 
-#define AXIS1_SERVO_P                 62
+#define AXIS1_SERVO_P                 40
 #define AXIS1_SERVO_I                 10      
-#define AXIS1_SERVO_D                 3       
+#define AXIS1_SERVO_D                 3      
 
 #define AXIS1_PID_P_GOTO              1.5
 #define AXIS1_PID_I_GOTO              7
@@ -218,7 +177,7 @@ frequency != 0 ? ... : 0	            Ensures zero output when pid should take ca
 
 // If runtime axis settings are enabled changes in the section below will be ignored (disable in SWS or by wiping NV/EEPROM):
 // \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
-#define AXIS2_STEPS_PER_DEGREE      22123 //  12800, n. Number of steps per degree:                                          <-Req'd
+#define AXIS2_STEPS_PER_DEGREE      22149 //  12800, n. Number of steps per degree:                                          <-Req'd
 //#define AXIS2_STEPS_PER_DEGREE      22267 //  12800, n. Number of steps per degree:                                          <-Req'd
                                           //         n = (stepper_steps * micro_steps * overall_gear_reduction)/360.0
 
@@ -236,7 +195,7 @@ frequency != 0 ? ... : 0	            Ensures zero output when pid should take ca
 
 
 // PWM 2 & 4 Hz
-#define AXIS2_SERVO_P                   62
+#define AXIS2_SERVO_P                   40
 #define AXIS2_SERVO_I                   10
 #define AXIS2_SERVO_D                   3
 
@@ -247,61 +206,19 @@ frequency != 0 ? ... : 0	            Ensures zero output when pid should take ca
 #define AXIS2_ENCODER                   AB
 
 /*
-FEED FORWARD control when guiding - Keep PID for cleanubg-up things (avoid jumps during guiding)           
-
-MOTOR A-max 26 Ø26 mm, Graphite Brushes, 11 Watt, with cables 353611
-https://www.maxongroup.com/maxon/view/product/353611
-Inductance (L): 0.77 mH
-Resistance (R): 7.36 Ω
-Mechanical time constant (τm): 14.7 ms
-Torque constant (Kt): 25.5 mNm/A
-No load speed	8890 RPM @ 24 V
-Maxon nominal speed	6910 RPM @ 24 V
-Electrical time constant τ_e = L/R = 0.77mH / 7.36Ω ≈ 0.105ms
-
-PWM frequency 4.577 kHz
-Encoder CPR	1000 (quadrature → 4000 counts/motorrev)
-Gear ratio 1991.07:1
-DEC resolution	7,964,280 steps/rev
-
-​We want 1 DEC revolution per sidereal day = 86164.091 s
-Motor rev/sec = 1 /86164.0911 * 1991.07 ≈  0.023107 rev/sec
-6910 RPM = 115.17 rev/s @ 24 V (We assume voltage affects speed linearly)
-8890 RPM = 148.16 rev/s @ 24 V (We assume voltage affects speed linearly)
-K_v_load =  115.17 / 24 =  4.7988 rev/s per volt
-K_v_unload =  148.16 / 24 =  6.1733 rev/s per volt
-
-Voltage required to get 0.023107 rev/s:
-𝑉_avg_load = 0.023107 / 4.7988 ≈ 0.00481516212
-𝑉_avg_unload = 0.023107 / 6.1733 ≈ 0.00374305476
-
-Duty cycle load = 0.00481516212 / 12.2 = 0.0.00039468541 = 0.03946%
-Duty cycle unload = 0.00374305476 / 12.2 = 0.00030680776 = 0.03068%
-​
-PWM resolution (ANALOG_WRITE_RANGE)	             15-bit → 0–32767
-Target duty cycle loaded	                           3.946%
-Target duty cycle unloaded	                           3.068%
-PWM_loaded	                                   ~1292.98 PWM units
-PWM_unloaded	                                   ~1005.29 PWM units
-Encoder ticks/sec at sidereal	                        92.45
-
-Compute Velocity Factor:
-VF gain loaded = 1292.98 / 92.45 ≈ 13.9857 (it is always the same for the same motors, irrespectively from the encoder)
-VF gain unloaded = 1005.29 / 92.45 ≈ 10.87 (it is always the same for the same motors, irrespectively from the encoder)
-frequency * VF gain	                  Linearly maps encoder rate to PWM, frequency is in encoder_steps/sec
-+ 100.0	                              Lowest pwm unit offset to overcome stiction/friction
-min(..., AXIS1_SERVO_VF_MAX_PWM)	      Clamp PWM to 1.5x loaded sidereal to avoid doing jumps
-copysign(..., frequency)	            Maintains direction (forward/reverse)
-frequency != 0 ? ... : 0	            Ensures zero output when pid should take care or idle
+    FEED FORWARD control when guiding - Keep PID for cleaning-up things (avoid jumps during guiding)           
+    MOTOR A-max 26 Ø26 mm, Graphite Brushes, 11 Watt, with cables 353611
+    https://www.maxongroup.com/maxon/view/product/353611
+    Check my spreadsheet
+    https://docs.google.com/spreadsheets/d/1TqrqgvhcozHfmjiFhKQ-0Jokc9Dp3P1-cK787SRMrFQ/edit?usp=sharing
 
 */
 
-#define AXIS2_SERVO_VF_MAX_FREQ 185    // 185 ≈ 2 * 92.45 (2x sidereal in encoder steps max frequency that uses VF)
-//#define AXIS2_SERVO_VF_GAIN     10.87  // motor pwm units per second / encoder steps per second in 1x sidereal
-#define AXIS2_SERVO_VF_GAIN     12.42785  // motor pwm units per second / encoder steps per second in 1x sidereal - 12.42785 is the mean of loaded/unloaded
-#define AXIS2_SERVO_VF_OFFSET   100    // the least pwm units for a movement
-//#define AXIS2_SERVO_VF_MAX_PWM  1939.47 // ~ around 1.5 sidereal loaded  (correlated also to AXIS2_SERVO_VF_MAX_FREQ)
+#define AXIS2_SERVO_VF_MAX_FREQ 231.125  // 2.5x sidereal in encoder steps max frequency that uses VF
+#define AXIS2_SERVO_VF_GAIN     506.62    // motor pwm units per second / encoder steps per second in 1x sidereal 
+#define AXIS2_SERVO_VF_OFFSET   100      // the least pwm units for a movement
 
+// frequency * VF gain Linearly maps encoder rate to PWM, frequency is in encoder_steps/sec
 #define AXIS2_SERVO_VELOCITY_FACTOR ( \
   (abs(frequency) < AXIS2_SERVO_VF_MAX_FREQ && abs(frequency) > 0.0) ? \
     copysign((max(abs(frequency * AXIS2_SERVO_VF_GAIN), AXIS2_SERVO_VF_OFFSET)), frequency) : 0 \
