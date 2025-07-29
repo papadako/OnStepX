@@ -73,7 +73,7 @@
 // sampling 10000 (default)
 // rule of thumb around 1/10 of PWM period
 //#define PID_SAMPLE_TIME_US            2500 // for PWM of 2.288KHz
-#define PID_SAMPLE_TIME_US            1200 // for PWM of 4.577KHz
+#define PID_SAMPLE_TIME_US            1200 // for PWM of 18.3KHz
 
 // Driver models (Step/Dir and Servo) many have specific requirements so be sure to follow the link below to help learn about these.
 // Typically: A4988, DRV8825, LV8729, S109, TMC2130, TMC5160, TMC2209, etc.
@@ -97,13 +97,11 @@
 #define AXIS1_LIMIT_MIN              -180 //   -180, n. Where n= -90..-360 (degrees.) Minimum "Hour Angle" or Azimuth.        Adjust
 #define AXIS1_LIMIT_MAX               180 //    180, n. Where n=  90.. 360 (degrees.) Maximum "Hour Angle" or Azimuth.        Adjust
 
-
-//#define AXIS1_SERVO_VELOCITY_SCALE    0.2
 #define AXIS1_SERVO_VELOCITY_MAX      99
 #define AXIS1_SERVO_ACCELERATION      100 
 
 /*
-    FEED FORWARD control when guiding - Keep PID for cleaning-up things (avoid jumps during guiding)           
+    FEED FORWARD control when guiding - Keep PID for cleaning-up things (avoid jumps during guiding)
     MOTOR A-max 26 Ø26 mm, Graphite Brushes, 11 Watt, with cables 353611
     https://www.maxongroup.com/maxon/view/product/353611
     Check my spreadsheet
@@ -111,9 +109,10 @@
 
 */
 
-#define AXIS1_SERVO_VF_MAX_FREQ 224.325  // 2.5x sidereal in encoder steps max frequency that uses VF
-#define AXIS1_SERVO_VF_GAIN     506.11    // motor pwm units per second / encoder steps per second in 1x sidereal 
-#define AXIS1_SERVO_VF_OFFSET   100      // the least pwm units for a movement
+#define AXIS1_SERVO_VF_MAX_FREQ   224.325                             // 2.5x sidereal in encoder steps max frequency that uses VF
+#define AXIS1_SERVO_VF_GAIN_MULT  2                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
+#define AXIS1_SERVO_VF_GAIN       0.0355 * AXIS1_SERVO_VF_GAIN_MULT   // motor pwm units per second / encoder steps per second in 1x sidereal
+#define AXIS1_SERVO_VF_OFFSET     2                                   // the least pwm units for a movement
 
 // frequency * VF gain Linearly maps encoder rate to PWM, frequency is in encoder_steps/sec
 #define AXIS1_SERVO_VELOCITY_FACTOR ( \
@@ -125,13 +124,13 @@
 
 // PWM 18KHz
 //#define AXIS1_SERVO_P                 0.2
-//#define AXIS1_SERVO_I                 6 
+//#define AXIS1_SERVO_I                 6
 //#define AXIS1_SERVO_D                 3
 
-// PWM 2 & 4 KHz 
+// PWM 2 & 4 KHz
 #define AXIS1_SERVO_P                 40
-#define AXIS1_SERVO_I                 10      
-#define AXIS1_SERVO_D                 3      
+#define AXIS1_SERVO_I                 10
+#define AXIS1_SERVO_D                 3
 
 #define AXIS1_PID_P_GOTO              1.5
 #define AXIS1_PID_I_GOTO              7
@@ -178,7 +177,6 @@
 // If runtime axis settings are enabled changes in the section below will be ignored (disable in SWS or by wiping NV/EEPROM):
 // \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
 #define AXIS2_STEPS_PER_DEGREE      22149 //  12800, n. Number of steps per degree:                                          <-Req'd
-//#define AXIS2_STEPS_PER_DEGREE      22267 //  12800, n. Number of steps per degree:                                          <-Req'd
                                           //         n = (stepper_steps * micro_steps * overall_gear_reduction)/360.0
 
 // mesu-200 specifics
@@ -206,7 +204,7 @@
 #define AXIS2_ENCODER                   AB
 
 /*
-    FEED FORWARD control when guiding - Keep PID for cleaning-up things (avoid jumps during guiding)           
+    FEED FORWARD control when guiding - Keep PID for cleaning-up things (avoid jumps during guiding)
     MOTOR A-max 26 Ø26 mm, Graphite Brushes, 11 Watt, with cables 353611
     https://www.maxongroup.com/maxon/view/product/353611
     Check my spreadsheet
@@ -214,9 +212,10 @@
 
 */
 
-#define AXIS2_SERVO_VF_MAX_FREQ 231.125  // 2.5x sidereal in encoder steps max frequency that uses VF
-#define AXIS2_SERVO_VF_GAIN     506.62    // motor pwm units per second / encoder steps per second in 1x sidereal 
-#define AXIS2_SERVO_VF_OFFSET   100      // the least pwm units for a movement
+#define AXIS2_SERVO_VF_MAX_FREQ 231.125                               // 2.5x sidereal in encoder steps max frequency that uses VF
+#define AXIS2_SERVO_VF_GAIN_MULT  2                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
+#define AXIS2_SERVO_VF_GAIN     0.0355 * AXIS2_SERVO_VF_GAIN_MULT     // motor pwm units per second / encoder steps per second in 1x sidereal
+#define AXIS2_SERVO_VF_OFFSET   2                                     // the least pwm units for a movement
 
 // frequency * VF gain Linearly maps encoder rate to PWM, frequency is in encoder_steps/sec
 #define AXIS2_SERVO_VELOCITY_FACTOR ( \
@@ -306,7 +305,7 @@
 // PARKING ---------------------------------------------------- see https://onstep.groups.io/g/main/wiki/Configuration_Mount#PARKING
 #define PARK_SENSE                    OFF //    OFF, HIGH or LOW state indicates mount is in the park orientation.            Option
 #define PARK_SIGNAL                   OFF //    OFF, HIGH or LOW state park input signal triggers parking.                    Option
-#define PARK_STATUS                   OFF //    OFF, signals with a HIGH or LOW state when successfully parked.               Option 
+#define PARK_STATUS                   OFF //    OFF, signals with a HIGH or LOW state when successfully parked.               Option
 #define PARK_STRICT                   OFF //    OFF, ON Un-parking is only allowed if successfully parked.                    Option
 
 // PEC ------------------------------------------------------------ see https://onstep.groups.io/g/main/wiki/Configuration_Mount#PEC
