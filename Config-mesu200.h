@@ -110,7 +110,7 @@
 */
 
 #define AXIS1_SERVO_VF_MAX_FREQ   224.325                             // 2.5x sidereal in encoder steps max frequency that uses VF
-#define AXIS1_SERVO_VF_GAIN_MULT  1.8                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
+#define AXIS1_SERVO_VF_GAIN_MULT  1.5                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
 #define AXIS1_SERVO_VF_GAIN       0.0355 * AXIS1_SERVO_VF_GAIN_MULT   // motor pwm units per second / encoder steps per second in 1x sidereal
 #define AXIS1_SERVO_VF_OFFSET     2                                   // the least pwm units for a movement
 
@@ -208,7 +208,7 @@
 */
 
 #define AXIS2_SERVO_VF_MAX_FREQ 231.125                               // 2.5x sidereal in encoder steps max frequency that uses VF
-#define AXIS2_SERVO_VF_GAIN_MULT  1.8                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
+#define AXIS2_SERVO_VF_GAIN_MULT  1                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
 #define AXIS2_SERVO_VF_GAIN     0.0355 * AXIS2_SERVO_VF_GAIN_MULT     // motor pwm units per second / encoder steps per second in 1x sidereal
 #define AXIS2_SERVO_VF_OFFSET   2                                     // the least pwm units for a movement
 
