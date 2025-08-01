@@ -56,6 +56,15 @@
 // https://onstep.groups.io/g/main/wiki/26881
 #define GOTO_REFINE_STAGES           2                            // number of times to perform the goto refinement stage
 
+//---------------------------------------------------
+// FOR DC Servos PWM duty cycle calibration and stiction breaking
+
+//#define CALIBRATE_SERVO_DC
+// Calibration axis selector: 1 = RA only, 2 = DEC only, 3 = both
+//#define CALIBRATE_SERVO_AXIS_SELECT 3
+
+//---------------------------------------------------
+
 // Important for PID
 
 /* pMode is the proportional mode parameter with options for pOnError proportional on error (default), 
@@ -110,8 +119,16 @@
 */
 
 #define AXIS1_SERVO_VF_MAX_FREQ   224.325                             // 2.5x sidereal in encoder steps max frequency that uses VF
-#define AXIS1_SERVO_VF_GAIN_MULT  1.5                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
+
+// 12 Volt ~1.76 % PWM 
+#define AXIS1_SERVO_VF_GAIN_MULT  50                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
 #define AXIS1_SERVO_VF_GAIN       0.0355 * AXIS1_SERVO_VF_GAIN_MULT   // motor pwm units per second / encoder steps per second in 1x sidereal
+
+// 9 Volt ~1.76 % PWM 
+//#define AXIS1_SERVO_VF_GAIN_MULT  38                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
+//#define AXIS1_SERVO_VF_GAIN_MULT  30                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
+//#define AXIS1_SERVO_VF_GAIN       0.0463 * AXIS1_SERVO_VF_GAIN_MULT   // motor pwm units per second / encoder steps per second in 1x sidereal
+
 #define AXIS1_SERVO_VF_OFFSET     2                                   // the least pwm units for a movement
 
 // frequency * VF gain Linearly maps encoder rate to PWM, frequency is in encoder_steps/sec
@@ -208,8 +225,14 @@
 */
 
 #define AXIS2_SERVO_VF_MAX_FREQ 231.125                               // 2.5x sidereal in encoder steps max frequency that uses VF
-#define AXIS2_SERVO_VF_GAIN_MULT  1                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
+// 12 Volt ~2.05 % PWM 
+#define AXIS2_SERVO_VF_GAIN_MULT  58                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
 #define AXIS2_SERVO_VF_GAIN     0.0355 * AXIS2_SERVO_VF_GAIN_MULT     // motor pwm units per second / encoder steps per second in 1x sidereal
+
+// 9 Volt ~2.05 % PWM 
+//#define AXIS2_SERVO_VF_GAIN_MULT  44                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
+//#define AXIS2_SERVO_VF_GAIN     0.0464 * AXIS2_SERVO_VF_GAIN_MULT     // motor pwm units per second / encoder steps per second in 1x sidereal
+
 #define AXIS2_SERVO_VF_OFFSET   2                                     // the least pwm units for a movement
 
 // frequency * VF gain Linearly maps encoder rate to PWM, frequency is in encoder_steps/sec
