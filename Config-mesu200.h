@@ -144,9 +144,9 @@
 #define AXIS1_SERVO_I                 1000
 #define AXIS1_SERVO_D                 30
 
-##define AXIS1_PID_P_GOTO              50
-##define AXIS1_PID_I_GOTO              25
-##define AXIS1_PID_D_GOTO              5
+//#define AXIS1_PID_P_GOTO              50
+//#define AXIS1_PID_I_GOTO              25
+//#define AXIS1_PID_D_GOTO              5
 #define AXIS1_PID_P_GOTO              1.5
 #define AXIS1_PID_I_GOTO              7
 #define AXIS1_PID_D_GOTO              1
