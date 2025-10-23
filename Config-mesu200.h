@@ -80,9 +80,7 @@
 #define PID_DMODE                     dOnError // dOnMeas (default), dOnError
 
 // sampling 10000 (default)
-// rule of thumb around 1/10 of PWM period
-//#define PID_SAMPLE_TIME_US            2500 // for PWM of 2.288KHz
-#define PID_SAMPLE_TIME_US            1200 // for PWM of 18.3KHz
+#define PID_SAMPLE_TIME_US            1500
 
 // Driver models (Step/Dir and Servo) many have specific requirements so be sure to follow the link below to help learn about these.
 // Typically: A4988, DRV8825, LV8729, S109, TMC2130, TMC5160, TMC2209, etc.
@@ -94,7 +92,7 @@
 // \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ 
 //#define AXIS1_STEPS_PER_DEGREE      21560 //  12800, n. Number of steps per degree:                                          <-Req'd
                                           //         n = (stepper_steps * micro_steps * overall_gear_reduction)/360.0
-#define AXIS1_STEPS_PER_DEGREE      21476 //  12800, n. Number of steps per degree:                                          <-Req'd
+#define AXIS1_STEPS_PER_DEGREE      21478 //  12800, n. Number of steps per degree:                                          <-Req'd
 
 // RA OK!!!
 // mesu-200 specifics
@@ -121,7 +119,9 @@
 #define AXIS1_SERVO_VF_MAX_FREQ   224.325                             // 2.5x sidereal in encoder steps max frequency that uses VF
 
 // 12 Volt ~1.76 % PWM 
-#define AXIS1_SERVO_VF_GAIN_MULT  50                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
+//#define AXIS1_SERVO_VF_GAIN_MULT  74                                  // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
+#define AXIS1_SERVO_VF_GAIN_MULT  10                                  // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
+// #define AXIS1_SERVO_VF_GAIN_MULT  1                                // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
 #define AXIS1_SERVO_VF_GAIN       0.0355 * AXIS1_SERVO_VF_GAIN_MULT   // motor pwm units per second / encoder steps per second in 1x sidereal
 
 // 9 Volt ~1.76 % PWM 
@@ -141,9 +141,12 @@
 
 // PWM 18KHz
 #define AXIS1_SERVO_P                 30
-#define AXIS1_SERVO_I                 2
-#define AXIS1_SERVO_D                 2
+#define AXIS1_SERVO_I                 1000
+#define AXIS1_SERVO_D                 30
 
+##define AXIS1_PID_P_GOTO              50
+##define AXIS1_PID_I_GOTO              25
+##define AXIS1_PID_D_GOTO              5
 #define AXIS1_PID_P_GOTO              1.5
 #define AXIS1_PID_I_GOTO              7
 #define AXIS1_PID_D_GOTO              1
@@ -155,8 +158,8 @@
 
 
 #define AXIS1_SERVO_FLTR            OFF // OFF, KALMAN, ROLLING, WINDOW
-#define AXIS1_SERVO_FLTR_WSIZE       3   // window size in samples
-#define AXIS1_SERVO_FLTR_MEAS_U      3 // kalaman measurement uncertainty, in encoder ticks
+#define AXIS1_SERVO_FLTR_WSIZE       30   // window size in samples
+#define AXIS1_SERVO_FLTR_MEAS_U      1 // kalaman measurement uncertainty, in encoder ticks
 #define AXIS1_SERVO_FLTR_VARIANCE   0.1 // kalaman responsiveness, usually between 0.001 and 1
 
 //#define AXIS1_DRIVER_MICROSTEPS       OFF //    OFF, n. Microstep mode when tracking.                                        <-Req'd
@@ -206,9 +209,12 @@
 
 // PWM 18.3 Hz
 #define AXIS2_SERVO_P                   30
-#define AXIS2_SERVO_I                   2
-#define AXIS2_SERVO_D                   2
+#define AXIS2_SERVO_I                   1000
+#define AXIS2_SERVO_D                   30
 
+//#define AXIS2_PID_P_GOTO                50
+//#define AXIS2_PID_I_GOTO                25
+//#define AXIS2_PID_D_GOTO                5
 #define AXIS2_PID_P_GOTO                1.5
 #define AXIS2_PID_I_GOTO                7
 #define AXIS2_PID_D_GOTO                1
@@ -226,7 +232,8 @@
 
 #define AXIS2_SERVO_VF_MAX_FREQ 231.125                               // 2.5x sidereal in encoder steps max frequency that uses VF
 // 12 Volt ~2.05 % PWM 
-#define AXIS2_SERVO_VF_GAIN_MULT  58                                   // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
+#define AXIS2_SERVO_VF_GAIN_MULT  10                                    // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
+//#define AXIS2_SERVO_VF_GAIN_MULT  58                                    // 2x the VF_GAIN due to low rpm and stiction (experimentally found)
 #define AXIS2_SERVO_VF_GAIN     0.0355 * AXIS2_SERVO_VF_GAIN_MULT     // motor pwm units per second / encoder steps per second in 1x sidereal
 
 // 9 Volt ~2.05 % PWM 
