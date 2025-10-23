@@ -38,9 +38,11 @@
 #define JTWSTM                      21     // JTW Astronomy JTWSTM telescope mount controller Rev 2.1
 #define MANTICORE                   22     // JTW Astronomy MANTICORE telescope mount controller Rev 1.0
 
-#define MaxPCB4Mesu                 23     // for Teensy4.1 for mesu modified by PP & GK
+#define SAL_XB1                     23     // SAL-XB1 telescope mount controller
 
-#define PINMAP_LAST                 23
+#define MaxPCB4Mesu                 24     // for Teensy4.1 for mesu modified by PP & GK
+
+#define PINMAP_LAST                 24
 
 // WEATHER sensors (temperature, pressure, and humidity)
 #define WEATHER_FIRST               1
@@ -150,7 +152,7 @@
 #define SERIAL_ST4_SERVER_PRESENT
 
 // NV -------------------------------------------------------------------------------------------------------------------
-#define INIT_NV_KEY                 583928943UL
+#define INIT_NV_KEY                 583928945UL
 
 #define NV_KEY                      0      // bytes: 4   , 4
 #define NV_SITE_NUMBER              4      // bytes: 1   , 1
@@ -170,11 +172,11 @@
 
 #define NV_ALIGN_MODEL_BASE         258    // bytes: 48  , 48
 #define NV_AXIS_SETTINGS_REVERT     306    // bytes: 2   , 2
-#define NV_AXIS_SETTINGS_BASE       308    // bytes: 45*9, 405
-#define NV_AXIS_ENCODER_ZERO_BASE   713    // bytes: 4 *2, 8
-#define NV_FOCUSER_SETTINGS_BASE    705    // bytes: 20*6, 120
-#define NV_ROTATOR_SETTINGS_BASE    833    // bytes: 11  , 11
-#define NV_FEATURE_SETTINGS_BASE    844    // bytes: 5 *8, 40
-#define NV_TELESCOPE_SETTINGS_BASE  884    // bytes: 2   , 2
+#define NV_AXIS_SETTINGS_BASE       308    // bytes: 76*9, 684
+#define NV_AXIS_ENCODER_ZERO_BASE   992    // bytes: 4 *2, 8
+#define NV_FOCUSER_SETTINGS_BASE    1000   // bytes: 20*6, 120
+#define NV_ROTATOR_SETTINGS_BASE    1003   // bytes: 11  , 11
+#define NV_FEATURE_SETTINGS_BASE    1014   // bytes: 5 *8, 40
+#define NV_TELESCOPE_SETTINGS_BASE  1054   // bytes: 2   , 2
 
-#define NV_LAST                     885
+#define NV_LAST                     1055
