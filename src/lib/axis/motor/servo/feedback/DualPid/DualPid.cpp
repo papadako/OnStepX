@@ -28,9 +28,18 @@ void DualPid::init(uint8_t axisNumber, ServoControl *control) {
 
   Feedback::init(axisNumber, control);
 
+  axisNum = axisNumber; // keep the axis for tracking control range defines
+
+  // Check tracking control range define
+  switch (axisNum) {
+    case 1: trackControlRange = DPID_TRACK_CTRL_RANGE_AXIS1; break;
+    case 2: trackControlRange = DPID_TRACK_CTRL_RANGE_AXIS2; break;
+    default: break; // trackControlRange is initialized to 0.0F in class member declaration
+  }
+
   axisPrefix[5] = '0' + axisNumber;
 
-  VF("MSG:"); V(axisPrefix); if (manuallySwitchParameters) { VL("using manual parameter switching"); } else { VL("using auto parameter scaling"); } 
+  VF("MSG:"); V(axisPrefix); if (manuallySwitchParameters) { VL("using manual parameter switching"); } else { VL("using auto parameter scaling"); }
 
   pid = new QuickPID(&control->in, &control->out, &control->set,
                      0, 0, 0,
@@ -55,12 +64,21 @@ void DualPid::setControlDirection(int8_t state) {
   if (state == ON) pid->SetControllerDirection(QuickPID::Action::reverse); else pid->SetControllerDirection(QuickPID::Action::direct);
 }
 
+// Maybe rename it to setSlewControlRange
 void DualPid::setControlRange(float controlRange) {
-  VF("MSG:"); V(axisPrefix); VF("setting feedback range +/-"); VL(controlRange);
-  pid->SetOutputLimits(-controlRange, controlRange);
+  // slewing range; compute tracking range from AXIS1/AXIS2 defines.
+  slewControlRange = controlRange;
+
+  VF("MSG:"); V(axisPrefix); VF("tracking feedback range +/-"); VL(trackControlRange);
+  VF("MSG:"); V(axisPrefix); VF("slewing feedback range +/-"); VL(slewControlRange);
+
+  // Apply current limits based on current mode.
+  float appliedControlRange = trackingSelected ? trackControlRange : slewControlRange;
+  VF("MSG:"); V(axisPrefix); VF("setting feedback range +/-"); VL(appliedControlRange);
+  pid->SetOutputLimits(-appliedControlRange, appliedControlRange);
 }
 
-// select PID param set for slewing
+// select PID param set for tracking
 void DualPid::selectTrackingParameters() {
   if (!trackingSelected) {
     VF("MSG:"); V(axisPrefix); VL("tracking selected");
@@ -68,6 +86,12 @@ void DualPid::selectTrackingParameters() {
     parameterSelectPercent = 0;
     pid->Reset();
     pid->SetTunings(trackingP.value, trackingI.value, trackingD.value);
+
+    // If define is <= 0 use the slewing range for tracking.
+    float appliedControlRange = (trackControlRange > 0.0F) ? trackControlRange : slewControlRange;
+
+    VF("MSG:"); V(axisPrefix); VF("applying tracking feedback range +/-"); VL(appliedControlRange);
+    pid->SetOutputLimits(-appliedControlRange, appliedControlRange);
     lastP = trackingP.value;
     lastI = trackingI.value;
     lastD = trackingD.value;
@@ -82,6 +106,9 @@ void DualPid::selectSlewingParameters() {
     parameterSelectPercent = 100;
     pid->Reset();
     pid->SetTunings(slewingP.value, slewingI.value, slewingD.value);
+    // Apply slewing control-range
+    VF("MSG:"); V(axisPrefix); VF("applying slew feedback range +/-"); VL(slewControlRange);
+    pid->SetOutputLimits(-slewControlRange, slewControlRange);
     lastP = slewingP.value;
     lastI = slewingI.value;
     lastD = slewingD.value;
