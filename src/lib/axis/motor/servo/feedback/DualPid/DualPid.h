@@ -28,6 +28,17 @@
 #ifndef PID_DMODE
   #define PID_DMODE dOnMeas
 #endif
+// -----------------------------------------------------------------------------
+// Tracking control-range caps per axis (PID output limit magnitude).
+// If a value is <= 0.0F, tracking reuses the slewing control range.
+// -----------------------------------------------------------------------------
+#ifndef DPID_TRACK_CTRL_RANGE_AXIS1
+  #define DPID_TRACK_CTRL_RANGE_AXIS1 0.0F
+#endif
+#ifndef DPID_TRACK_CTRL_RANGE_AXIS2
+  #define DPID_TRACK_CTRL_RANGE_AXIS2 0.0F
+#endif
+
 
 class DualPid : public Feedback {
   public:
@@ -48,7 +59,7 @@ class DualPid : public Feedback {
     // set feedback control direction
     void setControlDirection(int8_t state);
 
-    // set feedback control range
+    // set feedback control range (for slewing)
     void setControlRange(float controlRange);
 
     // select PID param set for tracking
@@ -75,6 +86,11 @@ class DualPid : public Feedback {
 
   private:
     QuickPID *pid;
+
+    // ranges & axis identification
+    float slewControlRange = 0.0F;
+    float trackControlRange = 0.0F;
+    uint8_t axisNum = 0;
 
     char axisPrefix[26] = " Axis_ServoFeedbackDPID, "; // prefix for debug messages
 
