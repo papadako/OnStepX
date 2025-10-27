@@ -7,7 +7,9 @@
 
 #include "../../../../../gpioEx/GpioEx.h"
 
-#if defined(ARDUINO_TEENSY41) && defined(AXIS1_STEP_PIN) && AXIS1_STEP_PIN == 38 && defined(SERVO_ANALOG_WRITE_FREQUENCY)
+// Teensy 4.1 Pin-38 PWM emulation disabled for Mesu builds so that we don't mess things up
+// I think the Pin-38 PWM emulation should be an option anyway
+#if defined(ARDUINO_TEENSY41) && !defined(MESU_MAXPCB4) && defined(AXIS1_STEP_PIN) && AXIS1_STEP_PIN == 38 && defined(SERVO_ANALOG_WRITE_FREQUENCY)
   // this is only for pin 38 of a Teensy4.1
   IntervalTimer itimer4;
   uint16_t _pwm38_period = 0;
@@ -67,9 +69,10 @@ bool ServoPE::init(bool reverse) {
   // set PWM frequency
   #ifdef SERVO_ANALOG_WRITE_FREQUENCY
     VF("MSG:"); V(axisPrefix); VF("setting control pins analog frequency "); VL(SERVO_ANALOG_WRITE_FREQUENCY);
-    #ifndef analogWritePin38
-      analogWriteFrequency(Pins->ph1, SERVO_ANALOG_WRITE_FREQUENCY);
-    #endif
+    // PH1 is a plain logic direction line; it should be steady HIGH/LOW.
+    //#ifndef analogWritePin38
+    //  analogWriteFrequency(Pins->ph1, SERVO_ANALOG_WRITE_FREQUENCY);
+    //#endif
     analogWriteFrequency(Pins->ph2, SERVO_ANALOG_WRITE_FREQUENCY);
   #endif
 
