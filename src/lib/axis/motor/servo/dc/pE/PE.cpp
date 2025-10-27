@@ -69,9 +69,10 @@ bool ServoPE::init(bool reverse) {
   // set PWM frequency
   #ifdef SERVO_ANALOG_WRITE_FREQUENCY
     VF("MSG:"); V(axisPrefix); VF("setting control pins analog frequency "); VL(SERVO_ANALOG_WRITE_FREQUENCY);
-    #ifndef analogWritePin38
-      analogWriteFrequency(Pins->ph1, SERVO_ANALOG_WRITE_FREQUENCY);
-    #endif
+    // PH1 is a plain logic direction line; it should be steady HIGH/LOW.
+    //#ifndef analogWritePin38
+    //  analogWriteFrequency(Pins->ph1, SERVO_ANALOG_WRITE_FREQUENCY);
+    //#endif
     analogWriteFrequency(Pins->ph2, SERVO_ANALOG_WRITE_FREQUENCY);
   #endif
 
