@@ -73,7 +73,10 @@ void DualPid::setControlRange(float controlRange) {
   VF("MSG:"); V(axisPrefix); VF("slewing feedback range +/-"); VL(slewControlRange);
 
   // Apply current limits based on current mode.
-  float appliedControlRange = trackingSelected ? trackControlRange : slewControlRange;
+  float appliedControlRange =
+    trackingSelected
+    ? (trackControlRange > 0.0F ? trackControlRange : slewControlRange)
+    : slewControlRange;
   VF("MSG:"); V(axisPrefix); VF("setting feedback range +/-"); VL(appliedControlRange);
   pid->SetOutputLimits(-appliedControlRange, appliedControlRange);
 }
