@@ -74,7 +74,7 @@
 /* awMode is the integral anti-windup parameter with an option for iAwCondition (default) that is based on PI terms to provide some integral correction, 
    prevent deep saturation and reduce overshoot. TheiAwClamp option clamps the summation of the pmTerm and iTerm. 
    The iAwOff option turns off all anti-windup. */
-#define PID_IMODE                     iAwCondition // iAwCondition (default), iAwClamp, iAwOff
+#define PID_IMODE                     iAwOff // iAwCondition (default), iAwClamp, iAwOff
 
 /* dMode is the derivative mode parameter with options for dOnError derivative on error, dOnMeas derivative on measurement (default).*/
 #define PID_DMODE                     dOnError // dOnMeas (default), dOnError
@@ -99,13 +99,16 @@
 #define AXIS1_REVERSE                 OFF //    OFF, ON Reverses movement direction, or reverse wiring instead to correct.   <-Often
 #define AXIS1_SERVO_PH1_STATE         LOW
 #define AXIS1_SERVO_PH2_STATE         LOW
-#define AXIS1_ENCODER_REVERSE         OFF // reverse encoder count direction
+#define AXIS1_ENCODER_REVERSE         ON // reverse encoder count direction
 
 #define AXIS1_LIMIT_MIN              -180 //   -180, n. Where n= -90..-360 (degrees.) Minimum "Hour Angle" or Azimuth.        Adjust
 #define AXIS1_LIMIT_MAX               180 //    180, n. Where n=  90.. 360 (degrees.) Maximum "Hour Angle" or Azimuth.        Adjust
 
-#define AXIS1_SERVO_VELOCITY_MAX      99
+//#define AXIS1_SERVO_VELOCITY_MAX      89
 #define AXIS1_SERVO_ACCELERATION      100 
+#define AXIS1_SERVO_DC_PWR_MIN        1.5
+#define AXIS1_SERVO_DC_PWR_MAX         89
+
 
 /*
     FEED FORWARD control when guiding - Keep PID for cleaning-up things (avoid jumps during guiding)
@@ -132,24 +135,29 @@
 #define AXIS1_SERVO_VF_OFFSET     2                                   // the least pwm units for a movement
 
 // frequency * VF gain Linearly maps encoder rate to PWM, frequency is in encoder_steps/sec
-#define AXIS1_SERVO_VELOCITY_FACTOR ( \
-  (abs(frequency) < AXIS1_SERVO_VF_MAX_FREQ && abs(frequency) > 0.0) ? \
-    copysign((max(abs(frequency * AXIS1_SERVO_VF_GAIN), AXIS1_SERVO_VF_OFFSET)), frequency) : 0 \
-)
+//#define AXIS1_SERVO_VELOCITY_FACTOR ( \
+//  (abs(frequency) < AXIS1_SERVO_VF_MAX_FREQ && abs(frequency) > 0.0) ? \
+//    copysign((max(abs(frequency * AXIS1_SERVO_VF_GAIN), AXIS1_SERVO_VF_OFFSET)), frequency) : 0 \
+//)
 
 //#define AXIS1_SERVO_VELOCITY_FACTOR 0
 
-// PWM 18KHz
-#define AXIS1_SERVO_P                 30
-#define AXIS1_SERVO_I                 1000
-#define AXIS1_SERVO_D                 30
+// DPID_TRACK_CTRL_RANGE_AXIS1 0.0
+//#define AXIS1_PID_P                 1500
+//#define AXIS1_PID_I                 200
+//#define AXIS1_PID_D                 2000
+
+// DPID_TRACK_CTRL_RANGE_AXIS1 12887.0F * 5.0F
+#define AXIS1_PID_P                 2000
+#define AXIS1_PID_I                 8000
+#define AXIS1_PID_D                 1000
 
 //#define AXIS1_PID_P_GOTO              50
 //#define AXIS1_PID_I_GOTO              25
 //#define AXIS1_PID_D_GOTO              5
-#define AXIS1_PID_P_GOTO              1.5
-#define AXIS1_PID_I_GOTO              7
-#define AXIS1_PID_D_GOTO              1
+#define AXIS1_PID_P_GOTO              150
+#define AXIS1_PID_I_GOTO              1000
+#define AXIS1_PID_D_GOTO              100
 #define AXIS1_PID_SENSITIVITY         0 // a setting of 0 now switches between PID and PID_GOTO when slews start/stop instead of continuously variable based on so % of the power/velocity.
 #define AXIS1_ENCODER                 AB
 
@@ -203,22 +211,28 @@
 #define AXIS2_LIMIT_MIN               -90 //    -90, n. Where n=-90..0 (degrees.) Minimum allowed Declination or Altitude.    Infreq
 #define AXIS2_LIMIT_MAX                90 //     90, n. Where n=0..90 (degrees.) Maximum allowed Declination or Altitude.     Infreq
 
-#define AXIS2_SERVO_VELOCITY_MAX        99
+//#define AXIS2_SERVO_VELOCITY_MAX        89
 #define AXIS2_SERVO_ACCELERATION        100
+#define AXIS2_SERVO_DC_PWR_MIN          0.5
+#define AXIS2_SERVO_DC_PWR_MAX           89
 
+// DPID_TRACK_CTRL_RANGE_AXIS2 0.0
+//#define AXIS2_PID_P                 1500
+//#define AXIS2_PID_I                 200
+//#define AXIS2_PID_D                 2000
 
-// PWM 18.3 Hz
-#define AXIS2_SERVO_P                   30
-#define AXIS2_SERVO_I                   1000
-#define AXIS2_SERVO_D                   30
+// DPID_TRACK_CTRL_RANGE_AXIS2 13289.0F * 5.0F
+#define AXIS2_PID_P                 2000
+#define AXIS2_PID_I                 8000
+#define AXIS2_PID_D                 1000
 
 //#define AXIS2_PID_P_GOTO                50
 //#define AXIS2_PID_I_GOTO                25
 //#define AXIS2_PID_D_GOTO                5
-#define AXIS2_PID_P_GOTO                1.5
-#define AXIS2_PID_I_GOTO                7
-#define AXIS2_PID_D_GOTO                1
-#define AXIS2_PID_SENSITIVITY		        0 // a setting of 0 now switches between PID and PID_GOTO when slews start/stop instead of continuously variable based on so % of the power/velocity.
+#define AXIS2_PID_P_GOTO                150
+#define AXIS2_PID_I_GOTO                1000
+#define AXIS2_PID_D_GOTO                100
+#define AXIS2_PID_SENSITIVITY		    0 // a setting of 0 now switches between PID and PID_GOTO when slews start/stop instead of continuously variable based on so % of the power/velocity.
 #define AXIS2_ENCODER                   AB
 
 /*
@@ -229,6 +243,7 @@
     https://docs.google.com/spreadsheets/d/1TqrqgvhcozHfmjiFhKQ-0Jokc9Dp3P1-cK787SRMrFQ/edit?usp=sharing
 
 */
+
 
 #define AXIS2_SERVO_VF_MAX_FREQ 231.125                               // 2.5x sidereal in encoder steps max frequency that uses VF
 // 12 Volt ~2.05 % PWM 
@@ -243,10 +258,10 @@
 #define AXIS2_SERVO_VF_OFFSET   2                                     // the least pwm units for a movement
 
 // frequency * VF gain Linearly maps encoder rate to PWM, frequency is in encoder_steps/sec
-#define AXIS2_SERVO_VELOCITY_FACTOR ( \
-  (abs(frequency) < AXIS2_SERVO_VF_MAX_FREQ && abs(frequency) > 0.0) ? \
-    copysign((max(abs(frequency * AXIS2_SERVO_VF_GAIN), AXIS2_SERVO_VF_OFFSET)), frequency) : 0 \
-)
+//#define AXIS2_SERVO_VELOCITY_FACTOR ( \
+//  (abs(frequency) < AXIS2_SERVO_VF_MAX_FREQ && abs(frequency) > 0.0) ? \
+//    copysign((max(abs(frequency * AXIS2_SERVO_VF_GAIN), AXIS2_SERVO_VF_OFFSET)), frequency) : 0 \
+//)
 
 
 // end mesu-200 specifics
@@ -345,8 +360,8 @@
 #define TRACK_BACKLASH_RATE            2 //     20, n. Where n=2..50 (x sidereal rate) during backlash takeup.               Option
                                           //         Too fast motors stall/gears slam or too slow and sluggish in backlash.
 #define TRACK_AUTOSTART               ON  //    OFF, ON Start with tracking enabled.                                          Option
-#define TRACK_COMPENSATION_DEFAULT    OFF //    OFF, No compensation or REFRACTION, REFRACTION_DUAL, MODEL, MODEL_DUAL.       Option
-#define TRACK_COMPENSATION_MEMORY     OFF //    OFF, ON Remembers refraction/pointing model compensated tracking settings.    Option
+#define TRACK_COMPENSATION_DEFAULT    REFRACTION //    OFF, No compensation or REFRACTION, REFRACTION_DUAL, MODEL, MODEL_DUAL.       Option
+#define TRACK_COMPENSATION_MEMORY     ON //    OFF, ON Remembers refraction/pointing model compensated tracking settings.    Option
 
 // SLEWING BEHAVIOUR ------------------------------------------ see https://onstep.groups.io/g/main/wiki/Configuration_Mount#SLEWING
 #define SLEW_RATE_BASE_DESIRED        7.5 //    1.0, n. Desired slew rate in deg/sec. Adjustable at run-time from            <-Req'd
