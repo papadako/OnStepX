@@ -9,6 +9,11 @@
 
 #include "../DcServoDriver.h"
 
+// default for typical hobbyist hbridges
+#ifndef SERVO_PE_DEAD_TIME_US
+#define SERVO_PE_DEAD_TIME_US 25  // 25 microseconds
+#endif
+
 class ServoPE : public ServoDcDriver {
   public:
     // constructor
@@ -34,6 +39,24 @@ class ServoPE : public ServoDcDriver {
     // motor control pwm update
     // \param power in SERVO_ANALOG_WRITE_RANGE units
     void pwmUpdate(long power);
+
+      enum DeadTimeState {
+        DEAD_TIME_IDLE = 0,
+        DEAD_TIME_ACTIVE
+      };
+
+    DeadTimeState deadTimeState = DEAD_TIME_IDLE;
+    uint32_t deadTimeStart = 0;
+    bool desiredDirection = false;
+
+    void analogWritePh2(uint8_t pin, int power) {
+      #ifdef analogWritePin38
+        if (pin == 38) analogWritePin38(power);
+        else analogWrite(pin, power);
+      #else
+        analogWrite(pin, power);
+      #endif
+    }
 };
 
 #endif

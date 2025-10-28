@@ -118,24 +118,94 @@ void ServoPE::enable(bool state) {
   ServoDriver::updateStatus();
 }
 
-void ServoPE::pwmUpdate(long power) {
-  if (!enabled) return;
+// Clamp helper to keep PWM within the valid range (0..SERVO_ANALOG_WRITE_RANGE)
+static inline int clampPower(long p) {
+  if (p < 0) return 0;
+  if (p > (long)SERVO_ANALOG_WRITE_RANGE) return (int)SERVO_ANALOG_WRITE_RANGE;
+  return (int)p;
+}
 
-  if (motorDirection == (reversed ? DIR_REVERSE : DIR_FORWARD)) {
-    digitalWriteF(Pins->ph1, Pins->ph1State);
-    if (Pins->ph2State == HIGH) power = SERVO_ANALOG_WRITE_RANGE - power;
-  } else
-  if (motorDirection == (reversed ? DIR_FORWARD : DIR_REVERSE)) {
-    digitalWriteF(Pins->ph1, !Pins->ph1State);
-    if (Pins->ph2State == HIGH) power = SERVO_ANALOG_WRITE_RANGE - power;
-  } else {
-    digitalWriteF(Pins->ph1, Pins->ph1State);
-    if (Pins->ph2State == HIGH) power = SERVO_ANALOG_WRITE_RANGE; else power = 0;
+void ServoPE::pwmUpdate(long power) {
+  // No output if the driver is disabled
+  if (!enabled) {
+    deadTimeState = DEAD_TIME_IDLE;
+    return;
   }
-  #ifdef analogWritePin38
-    if (Pins->ph2 == 38) analogWritePin38(power); else
-  #endif
-  analogWrite(Pins->ph2, power);
+
+  // determine requested direction
+  const bool forwardReq = (motorDirection == (reversed ? DIR_REVERSE : DIR_FORWARD));
+  const bool reverseReq = (motorDirection == (reversed ? DIR_FORWARD : DIR_REVERSE));
+  const bool neutralReq = !(forwardReq || reverseReq);
+
+  // clamp power to valid range
+  int p = clampPower(power);
+
+  // determine desired PH1 state
+  bool desiredPh1 = Pins->ph1State;
+  if (reverseReq) {
+    desiredPh1 = !Pins->ph1State;
+  } else if (neutralReq) {
+    desiredPh1 = Pins->ph1State;
+  }
+
+  // handle dead time state machine (when changing directions)
+  if (deadTimeState == DEAD_TIME_ACTIVE) {
+    uint32_t elapsed = micros() - deadTimeStart;
+    if (elapsed < SERVO_PE_DEAD_TIME_US) {
+      // Still in dead time - maintain safe state
+      digitalWriteF(Pins->ph1, Pins->ph1State);  // Default direction
+      const int idle = (Pins->ph2State == HIGH) ? (int)SERVO_ANALOG_WRITE_RANGE : 0;
+      analogWritePh2(Pins->ph2, idle);
+      return;
+    } else {
+      // Dead time completed - apply new direction
+      deadTimeState = DEAD_TIME_IDLE;
+      digitalWriteF(Pins->ph1, desiredDirection);
+    }
+  }
+
+  // get current PH1 state
+  bool currentPh1 = (digitalReadEx(Pins->ph1) == HIGH);
+  bool ph1NeedsToggle = (currentPh1 != desiredPh1);
+
+  // safe direction change protocol
+  if (ph1NeedsToggle && p > 0) {
+    // Ramp down first - set PH2 to inactive
+    const int idle = (Pins->ph2State == HIGH) ? (int)SERVO_ANALOG_WRITE_RANGE : 0;
+    analogWritePh2(Pins->ph2, idle);
+    return;  // Wait for next call with p == 0
+  }
+
+  // start dead time when direction change needed and PWM is zero
+  if (ph1NeedsToggle && p == 0) {
+    deadTimeState = DEAD_TIME_ACTIVE;
+    deadTimeStart = micros();
+    desiredDirection = desiredPh1;  // Store for after dead time
+
+    // Set safe state during dead time
+    digitalWriteF(Pins->ph1, Pins->ph1State);  // Default direction
+    const int idle = (Pins->ph2State == HIGH) ? (int)SERVO_ANALOG_WRITE_RANGE : 0;
+    analogWritePh2(Pins->ph2, idle);
+    return;
+  }
+
+  // handle neutral state
+  if (neutralReq) {
+    digitalWriteF(Pins->ph1, desiredPh1);
+    const int idle = (Pins->ph2State == HIGH) ? (int)SERVO_ANALOG_WRITE_RANGE : 0;
+    analogWritePh2(Pins->ph2, idle);
+    return;
+  }
+
+  // normal operation
+  digitalWriteF(Pins->ph1, desiredPh1);
+
+  // apply PH2 polarity
+  if (Pins->ph2State == HIGH) {
+    p = (int)SERVO_ANALOG_WRITE_RANGE - p;
+  }
+
+  analogWritePh2(Pins->ph2, p);
 }
 
 // update status info. for driver
