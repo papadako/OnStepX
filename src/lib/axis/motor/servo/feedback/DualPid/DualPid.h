@@ -34,9 +34,11 @@
 // -----------------------------------------------------------------------------
 #ifndef DPID_TRACK_CTRL_RANGE_AXIS1
   #define DPID_TRACK_CTRL_RANGE_AXIS1 0.0F
+  //#define DPID_TRACK_CTRL_RANGE_AXIS1 12887.0F
 #endif
 #ifndef DPID_TRACK_CTRL_RANGE_AXIS2
   #define DPID_TRACK_CTRL_RANGE_AXIS2 0.0F
+  //#define DPID_TRACK_CTRL_RANGE_AXIS2 13289.0F
 #endif
 
 
