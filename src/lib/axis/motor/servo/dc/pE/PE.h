@@ -9,9 +9,12 @@
 
 #include "../DcServoDriver.h"
 
-// default for typical hobbyist hbridges
-#ifndef SERVO_PE_DEAD_TIME_US
-#define SERVO_PE_DEAD_TIME_US 25  // 25 microseconds
+// Dead time is only relevant when SERVO_DIRECTION_CHANGE_DEAD_TIME is enabled.
+// Default for typical arduino H-bridges.
+#if defined(SERVO_DIRECTION_CHANGE_DEAD_TIME)
+  #ifndef SERVO_PE_DEAD_TIME_US
+    #define SERVO_PE_DEAD_TIME_US 25  // 25 microseconds
+  #endif
 #endif
 
 class ServoPE : public ServoDcDriver {
@@ -40,14 +43,16 @@ class ServoPE : public ServoDcDriver {
     // \param power in SERVO_ANALOG_WRITE_RANGE units
     void pwmUpdate(long power);
 
+    // Dead-time state machine (only when enabled)
+    #if defined(SERVO_DIRECTION_CHANGE_DEAD_TIME)
       enum DeadTimeState {
         DEAD_TIME_IDLE = 0,
         DEAD_TIME_ACTIVE
       };
-
-    DeadTimeState deadTimeState = DEAD_TIME_IDLE;
-    uint32_t deadTimeStart = 0;
-    bool desiredDirection = false;
+      DeadTimeState deadTimeState = DEAD_TIME_IDLE;
+      uint32_t deadTimeStart = 0;
+      bool desiredDirection = false;
+    #endif
 
     void analogWritePh2(uint8_t pin, int power) {
       #ifdef analogWritePin38
