@@ -69,10 +69,6 @@ bool ServoPE::init(bool reverse) {
   // set PWM frequency
   #ifdef SERVO_ANALOG_WRITE_FREQUENCY
     VF("MSG:"); V(axisPrefix); VF("setting control pins analog frequency "); VL(SERVO_ANALOG_WRITE_FREQUENCY);
-    // PH1 is a plain logic direction line; it should be steady HIGH/LOW.
-    //#ifndef analogWritePin38
-    //  analogWriteFrequency(Pins->ph1, SERVO_ANALOG_WRITE_FREQUENCY);
-    //#endif
     analogWriteFrequency(Pins->ph2, SERVO_ANALOG_WRITE_FREQUENCY);
   #endif
 
@@ -115,6 +111,10 @@ void ServoPE::enable(bool state) {
 
   velocityRamp = 0.0F;
 
+  #if defined(SERVO_DIRECTION_CHANGE_DEAD_TIME)
+    deadTimeState = DEAD_TIME_IDLE;
+  #endif
+
   ServoDriver::updateStatus();
 }
 
@@ -128,7 +128,9 @@ static inline int clampPower(long p) {
 void ServoPE::pwmUpdate(long power) {
   // No output if the driver is disabled
   if (!enabled) {
-    deadTimeState = DEAD_TIME_IDLE;
+    #if defined(SERVO_DIRECTION_CHANGE_DEAD_TIME)
+      deadTimeState = DEAD_TIME_IDLE;
+    #endif
     return;
   }
 
@@ -148,21 +150,24 @@ void ServoPE::pwmUpdate(long power) {
     desiredPh1 = Pins->ph1State;
   }
 
-  // handle dead time state machine (when changing directions)
-  if (deadTimeState == DEAD_TIME_ACTIVE) {
-    uint32_t elapsed = micros() - deadTimeStart;
-    if (elapsed < SERVO_PE_DEAD_TIME_US) {
-      // Still in dead time - maintain safe state
-      digitalWriteF(Pins->ph1, Pins->ph1State);  // Default direction
-      const int idle = (Pins->ph2State == HIGH) ? (int)SERVO_ANALOG_WRITE_RANGE : 0;
-      analogWritePh2(Pins->ph2, idle);
-      return;
-    } else {
-      // Dead time completed - apply new direction
-      deadTimeState = DEAD_TIME_IDLE;
-      digitalWriteF(Pins->ph1, desiredDirection);
+  // -------- Dead-time handling (optional) --------
+  #if defined(SERVO_DIRECTION_CHANGE_DEAD_TIME)
+    // handle dead time state machine (when changing directions)
+    if (deadTimeState == DEAD_TIME_ACTIVE) {
+      uint32_t elapsed = micros() - deadTimeStart;
+      if (elapsed < SERVO_PE_DEAD_TIME_US) {
+        // Still in dead time - maintain safe state
+        digitalWriteF(Pins->ph1, Pins->ph1State);  // Default direction
+        const int idle = (Pins->ph2State == HIGH) ? (int)SERVO_ANALOG_WRITE_RANGE : 0;
+        analogWritePh2(Pins->ph2, idle);
+        return;
+      } else {
+        // Dead time completed - apply new direction
+        deadTimeState = DEAD_TIME_IDLE;
+        digitalWriteF(Pins->ph1, desiredDirection);
+      }
     }
-  }
+  #endif
 
   // get current PH1 state
   bool currentPh1 = (digitalReadEx(Pins->ph1) == HIGH);
@@ -176,17 +181,24 @@ void ServoPE::pwmUpdate(long power) {
     return;  // Wait for next call with p == 0
   }
 
-  // start dead time when direction change needed and PWM is zero
+  // start direction change when PWM is idle
   if (ph1NeedsToggle && p == 0) {
-    deadTimeState = DEAD_TIME_ACTIVE;
-    deadTimeStart = micros();
-    desiredDirection = desiredPh1;  // Store for after dead time
+    #if defined(SERVO_DIRECTION_CHANGE_DEAD_TIME)
+      // Enter timed dead time
+      deadTimeState = DEAD_TIME_ACTIVE;
+      deadTimeStart = micros();
+      desiredDirection = desiredPh1;  // Store for after dead time
 
-    // Set safe state during dead time
-    digitalWriteF(Pins->ph1, Pins->ph1State);  // Default direction
-    const int idle = (Pins->ph2State == HIGH) ? (int)SERVO_ANALOG_WRITE_RANGE : 0;
-    analogWritePh2(Pins->ph2, idle);
-    return;
+      // Safe state during dead time
+      digitalWriteF(Pins->ph1, Pins->ph1State);  // Default direction
+      const int idle = (Pins->ph2State == HIGH) ? (int)SERVO_ANALOG_WRITE_RANGE : 0;
+      analogWritePh2(Pins->ph2, idle);
+      return;
+    #else
+      // No timed dead time: flip direction immediately once idle
+      digitalWriteF(Pins->ph1, desiredPh1);
+      // PH2 already idle; proceed to normal path below
+    #endif
   }
 
   // handle neutral state
