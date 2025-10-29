@@ -55,7 +55,7 @@ class ServoMotor : public Motor {
 
     // check if parameter is valid
     bool parameterIsValid(AxisParameter* parameter, bool next = false) { if (!Motor::parameterIsValid(parameter, next)) return false; else return driver->parameterIsValid(parameter, next); }
-    
+
     // sets reversal of axis directions
     // \param state: true reverses the direction behavior specified in settings
     void setReverse(int8_t state);
@@ -66,7 +66,7 @@ class ServoMotor : public Motor {
     // get the associated motor driver status
     DriverStatus getDriverStatus();
 
-    // resets motor and target angular position in steps, also zeros backlash and index 
+    // resets motor and target angular position in steps, also zeros backlash and index
     void resetPositionSteps(long value);
 
     // get instrument coordinate, in steps
@@ -121,7 +121,7 @@ class ServoMotor : public Motor {
 
     // sets dir as required and moves coord toward target at setFrequencySteps() rate
     void move();
-    
+
     // servo motor driver
     ServoDriver *driver;
 
@@ -140,6 +140,10 @@ class ServoMotor : public Motor {
     ServoControl *control;
     #ifdef CALIBRATE_SERVO_DC
       ServoCalibrateTrackingVelocity *calibrateVelocity;
+    #endif
+
+    #if defined(SERVO_SIGMA_DELTA_DITHERING) && SERVO_SIGMA_DELTA_DITHERING != OFF
+      SigmaDeltaDither sd_pwm;
     #endif
 
     uint8_t servoMonitorHandle = 0;

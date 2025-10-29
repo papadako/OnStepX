@@ -55,6 +55,11 @@ void ServoEE::enable(bool state) {
     if (Pins->ph1State == HIGH) analogWrite(Pins->ph1, SERVO_ANALOG_WRITE_RANGE); else analogWrite(Pins->ph1, 0);
     if (Pins->ph2State == HIGH) analogWrite(Pins->ph2, SERVO_ANALOG_WRITE_RANGE); else analogWrite(Pins->ph2, 0);
 
+    // reset sigma delta dithering if enabled
+    #if defined(SERVO_SIGMA_DELTA_DITHERING) && SERVO_SIGMA_DELTA_DITHERING != OFF
+      sd_pwm_.reset();
+    #endif
+
     if (enablePin != SHARED) {
       VF(" and powered down using enable pin");
       digitalWriteF(enablePin, !enabledState);

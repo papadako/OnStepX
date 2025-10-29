@@ -89,6 +89,11 @@ void ServoPE::enable(bool state) {
   if (!enabled) {
     int32_t power = 0;
 
+    // reset sigma delta dithering if enabled
+    #if defined(SERVO_SIGMA_DELTA_DITHERING) && SERVO_SIGMA_DELTA_DITHERING != OFF
+      sd_pwm_.reset();
+    #endif
+
     VF("PE outputs off");
     digitalWriteF(Pins->ph1, Pins->ph1State);
     if (Pins->ph2State == HIGH) power = SERVO_ANALOG_WRITE_RANGE; else power = 0;

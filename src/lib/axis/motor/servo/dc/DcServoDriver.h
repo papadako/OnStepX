@@ -16,6 +16,7 @@
 #endif
 
 #include "../ServoDriver.h"
+#include "SigmaDeltaDither.h"
 
 class ServoDcDriver : public ServoDriver {
   public:
@@ -45,6 +46,10 @@ class ServoDcDriver : public ServoDriver {
       if (velocity < 0.0F) { velocity = -velocity; sign = -1; }
 
       if (velocity == 0.0F || velocityMaxCached <= 0.0f) {
+        // Zero torque: also reset dithering so no stale fraction is carried.
+        #if defined(SERVO_SIGMA_DELTA_DITHERING) && SERVO_SIGMA_DELTA_DITHERING != OFF
+          sd_pwm_.reset();
+        #endif
         return 0; // early out
       }
 
@@ -56,10 +61,16 @@ class ServoDcDriver : public ServoDriver {
       // fmaf keeps one rounding and is very fast on some FPUS(M7).
       float countsF = fmaf(vAbs, velToCountsGain, (float)countsMinCached);
 
-      // Single float→int rounding at the end
-      long power = (long)lroundf(countsF);
+      // Quantize: sigma–delta (preferred) or round
+      long power;
+      #if defined(SERVO_SIGMA_DELTA_DITHERING) && SERVO_SIGMA_DELTA_DITHERING != OFF
+        power = (long)sd_pwm_.dither_counts(countsF, countsMinCached, countsMaxCached);
+      #else
+        // Single float→int rounding at the end
+        power = (long)lroundf(countsF);
+      #endif
 
-      return power * sign;
+      return sign < 0 ? -power : power;
     }
 
     // motor control update
@@ -112,6 +123,10 @@ class ServoDcDriver : public ServoDriver {
         velToCountsGain = (velocityMaxCached > 0.0f) ? ((float)span / velocityMaxCached) : 0.0f;
       }
     }
+
+    #if defined(SERVO_SIGMA_DELTA_DITHERING) && SERVO_SIGMA_DELTA_DITHERING != OFF
+      SigmaDeltaDither sd_pwm_;     // per-axis sigma–delta state
+    #endif
 };
 
 #endif
