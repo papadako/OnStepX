@@ -19,7 +19,7 @@ ServoDcDriver::ServoDcDriver(uint8_t axisNumber, const ServoPins *Pins, const Se
 float ServoDcDriver::setMotorVelocity(float velocity)  {
   velocity = ServoDriver::setMotorVelocity(velocity);
 
-  pwmUpdate(fabs(toAnalogRange(velocity)));
+  pwmUpdate(labs(toAnalogRange(velocity)));
 
   return velocity;
 }
