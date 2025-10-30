@@ -40,7 +40,9 @@
 
 #define SAL_XB1                     23     // SAL-XB1 telescope mount controller
 
-#define PINMAP_LAST                 23
+#define MaxPCB4Mesu                 24     // for Teensy4.1 for mesu modified by PP & GK
+
+#define PINMAP_LAST                 24
 
 // WEATHER sensors (temperature, pressure, and humidity)
 #define WEATHER_FIRST               1
