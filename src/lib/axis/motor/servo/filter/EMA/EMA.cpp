@@ -6,7 +6,7 @@
 // no overshoot artifacts
 // implements both position and velocity filtering
 
-#include "EMAFilter.h"
+#include "EMA.h"
 
 #if AXIS1_SERVO_FLTR == EMA || AXIS2_SERVO_FLTR == EMA || AXIS3_SERVO_FLTR == EMA || \
     AXIS4_SERVO_FLTR == EMA || AXIS5_SERVO_FLTR == EMA || AXIS6_SERVO_FLTR == EMA || \
