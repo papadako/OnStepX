@@ -58,6 +58,8 @@
     RollingFilter filterAxis1(AXIS1_SERVO_FLTR_WSIZE);
   #elif AXIS1_SERVO_FLTR == WINDOWING
     WindowingFilter filterAxis1(AXIS1_SERVO_FLTR_WSIZE);
+  #elif AXIS1_SERVO_FLTR == EMA
+    EMAFilter filterAxis1(AXIS1_SERVO_EMA_TAU_TRACKING_SEC, AXIS1_SERVO_EMA_TAU_SLEWING_SEC, EMA_DT_SEC);
   #elif AXIS1_SERVO_FLTR == OFF
     Filter filterAxis1;
   #endif
@@ -164,6 +166,8 @@ Axis axis1(1, &PinsAxis1, &SettingsAxis1, AXIS_MEASURE_RADIANS, arcsecToRad(AXIS
     RollingFilter filterAxis2(AXIS2_SERVO_FLTR_WSIZE);
   #elif AXIS2_SERVO_FLTR == WINDOWING
     WindowingFilter filterAxis2(AXIS2_SERVO_FLTR_WSIZE);
+  #elif AXIS2_SERVO_FLTR == EMA
+    EMAFilter filterAxis2(AXIS2_SERVO_EMA_TAU_TRACKING_SEC, AXIS2_SERVO_EMA_TAU_SLEWING_SEC, EMA_DT_SEC);
   #elif AXIS2_SERVO_FLTR == OFF
     Filter filterAxis2;
   #endif
