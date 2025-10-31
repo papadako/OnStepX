@@ -98,11 +98,10 @@
 
 
 // Use reciprocal (period-based) speed during tracking (1=yes, 0=no).
-#ifndef ENCODER_RECIP_USE_IN_TRACKING
-  #define ENCODER_RECIP_USE_IN_TRACKING 1
+#ifdef ENCODER_RECIP_USE_IN_TRACKING
   // Reject impossibly short pulses (EMI) in reciprocal path (scope & tune).
-  #ifndef ENCODER_RECIP_USE_IN_TRACKING
-    #define ENCODER_RECIP_USE_IN_TRACKING 1
+  #ifndef RECIP_MIN_PULSE_US
+    #define RECIP_MIN_PULSE_US  2   // reject EMI / impossibly short pulses
   #endif
 #endif
 
