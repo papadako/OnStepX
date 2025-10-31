@@ -6,3 +6,4 @@
 #include "Learning/Learning.h"
 #include "Rolling/Rolling.h"
 #include "Windowing/Windowing.h"
+#include "EMA/EMA.h"
