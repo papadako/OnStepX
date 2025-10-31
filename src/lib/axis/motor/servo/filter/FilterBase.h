@@ -33,9 +33,23 @@
 #endif
 
 class Filter {
-  public:
-    virtual long update(long encoderCounts, long motorCounts, bool isTracking) { UNUSED(motorCounts); UNUSED(isTracking); return encoderCounts; }
+public:
+    // Position-style path
+    // Takes raw measured position (long, in counts) and motor position (long, in counts)
+    // Returns filtered encoder position in counts
+    // Default implementation = passthrough
+    virtual long update(long encoderCounts, long motorCounts, bool isTracking) {
+        UNUSED(motorCounts);
+        UNUSED(isTracking);
+        return encoderCounts;
+    }
 
-  private:
-    bool initialized = false;
+    // Velocity-style path
+    // Takes raw measured velocity (float, e.g. steps/s or arcsec/s)
+    // Returns filtered velocity (same units)
+    // Default implementation = passthrough.
+    virtual float updateVelocity(float velocityRaw, bool isTracking) {
+        UNUSED(isTracking);
+        return velocityRaw;
+    }
 };
