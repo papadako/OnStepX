@@ -25,7 +25,8 @@
 
 // Time constants for tracking vs slewing. These control smoothing strength.
 #ifndef EMA_TAU_TRACKING_SEC
-  #define EMA_TAU_TRACKING_SEC (0.015f)   // ~15 ms corner in tracking
+  //#define EMA_TAU_TRACKING_SEC (0.015f)   // ~15 ms corner in tracking (for velocity)
+  #define EMA_TAU_TRACKING_SEC (0.01f)   // ~10 ms corner in tracking (for positon) α ~ 0.13
 #endif
 #ifndef EMA_TAU_SLEWING_SEC
   #define EMA_TAU_SLEWING_SEC  (0.005f)   // ~5 ms corner in slewing
@@ -47,7 +48,7 @@
 // Optional: bypass smoothing during slews for position, because we mostly
 // care about smoothing in tracking anyway.
 #ifndef EMA_DISABLE_POS_ON_SLEW
-  #define EMA_DISABLE_POS_ON_SLEW 1
+  #define EMA_DISABLE_POS_ON_SLEW 1 // set it to true for position
 #endif
 
 class EMAFilter : public Filter {
