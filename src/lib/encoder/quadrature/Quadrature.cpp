@@ -80,7 +80,7 @@ bool Quadrature::init() {
   int bPin = digitalPinToInterrupt(BPin);
 
   if (aPin < 0 || bPin < 0) {
-    DF("ERR: Encoder Quadrature"); D(axis); DLF(" init(), couldn't attach interrupt!"); 
+    DF("ERR: Encoder Quadrature"); D(axis); DLF(" init(), couldn't attach interrupt!");
     return false;
   }
 
@@ -193,7 +193,14 @@ ICACHE_RAM_ATTR void Quadrature::A(const int16_t pin) {
     case 0b1111: QUAD_F2; break; // skipped pulse (invalid A state, valid B state)
   }
   quadratureCount += dir;
-  
+
+  #if ENCODER_RECIP_USE_IN_TRACKING
+    extern Encoder* encoder[9];
+    if (encoder[axis_index]) {
+      encoder[axis_index]->onEdgeISR(dir);
+    }
+  #endif
+
   lastA = stateA;
 }
 
@@ -223,6 +230,13 @@ ICACHE_RAM_ATTR void Quadrature::B(const int16_t pin) {
     case 0b1111: QUAD_F2; break;  // skipped pulse (valid A state, invalid B state)
   }
   quadratureCount += dir;
+
+  #if ENCODER_RECIP_USE_IN_TRACKING
+    extern Encoder* encoder[9];
+    if (encoder[axis_index]) {
+      encoder[axis_index]->onEdgeISR(dir);
+    }
+  #endif
 
   lastB = stateB;
 }

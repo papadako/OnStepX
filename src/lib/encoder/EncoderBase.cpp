@@ -82,15 +82,48 @@ void Encoder::poll() {
   if (tick++ % ENCODER_VELOCITY_WINDOW == 0) {
     unsigned long now = millis();
 
-    if (count != lastCount) {
-      int32_t counts = count - lastCount;
-      long period = (long)(now - lastVelocityCheckTimeMs);
-      velocity = counts/(period/1000.0F);
-      lastCount = count;
-    } else velocity = 0;
-
-    lastVelocityCheckTimeMs = now;
+    #if ENCODER_RECIP_USE_IN_TRACKING
+      if (!trackingHint) {  // slewing: use windowed estimate
+    #endif
+        if (count != lastCount) {
+          int32_t counts = count - lastCount;
+          long period = (long)(now - lastVelocityCheckTimeMs);
+          if (period > 0) velocity = counts / (period / 1000.0F);
+          else            velocity = 0;
+          lastCount = count;
+        } else {
+          velocity = 0;
+        }
+        lastVelocityCheckTimeMs = now;
+    #if ENCODER_RECIP_USE_IN_TRACKING
+      } else {
+        // tracking & reciprocal enabled: skip windowed update
+        // keep references fresh so windowed calc is valid when slewing resumes
+        lastCount = count;
+        lastVelocityCheckTimeMs = now;
+      }
+    #endif
   }
+
+  // After your existing windowed velocity computation
+  #if ENCODER_RECIP_USE_IN_TRACKING
+    if (trackingHint) {
+      noInterrupts();
+      float    vR   = vRec_cps;
+      uint32_t last = lastEdgeUs;
+      interrupts();
+
+      const uint32_t TOUT_US = 200000; // 0.2 s
+      uint32_t nowUs = micros();
+      if ((uint32_t)(nowUs - last) <= TOUT_US) {
+        velocity = vR;  // counts/s
+      } else {
+        // zero out if reciprocal stale (otherwise it keeps previous value)
+        // velocity = 0;
+      }
+    }
+    // else (slewing): keep windowed 'velocity'
+  #endif
 
   // run once every 5 seconds
   if (tick++ % 20 == 0) {

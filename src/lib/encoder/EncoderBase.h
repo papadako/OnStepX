@@ -47,7 +47,7 @@
   #define HAS_JTW_26BIT
 #endif
 
-#if defined(HAS_AS37_H39B_B) || defined(HAS_LIKA_ASC85) || defined(HAS_JTW_24BIT) || defined(HAS_JTW_26BIT) 
+#if defined(HAS_AS37_H39B_B) || defined(HAS_LIKA_ASC85) || defined(HAS_JTW_24BIT) || defined(HAS_JTW_26BIT)
   #define HAS_BISS_C
 #endif
 
@@ -65,7 +65,7 @@
   #define ENCODER_VELOCITY_WINDOW 4
 #endif
 
-// OFF is disabled, ON disregards unexpected quadrature encoder signals, or 
+// OFF is disabled, ON disregards unexpected quadrature encoder signals, or
 // a value > 0 (nanoseconds) disregards repeat signal events for that timer period
 #ifndef ENCODER_FILTER
   #define ENCODER_FILTER OFF
@@ -95,7 +95,17 @@
 #if AXIS1_ENCODER != OFF || AXIS2_ENCODER != OFF || AXIS3_ENCODER != OFF || \
     AXIS4_ENCODER != OFF || AXIS5_ENCODER != OFF || AXIS6_ENCODER != OFF || \
     AXIS7_ENCODER != OFF || AXIS8_ENCODER != OFF || AXIS9_ENCODER != OFF
-    
+
+
+// Use reciprocal (period-based) speed during tracking (1=yes, 0=no).
+#ifndef ENCODER_RECIP_USE_IN_TRACKING
+  #define ENCODER_RECIP_USE_IN_TRACKING 1
+  // Reject impossibly short pulses (EMI) in reciprocal path (scope & tune).
+  #ifndef ENCODER_RECIP_USE_IN_TRACKING
+    #define ENCODER_RECIP_USE_IN_TRACKING 1
+  #endif
+#endif
+
 class Encoder {
   public:
     // get device ready for use
@@ -121,6 +131,30 @@ class Encoder {
 
     // update encoder status
     void poll();
+
+    // Tracking hint (set by servo/motor layer)
+    inline void setTrackingHint(bool on) { trackingHint = on; }
+    inline bool getTrackingHint() const { return trackingHint; }
+
+    #if ENCODER_RECIP_USE_IN_TRACKING
+      // Reciprocal (period-based) instantaneous velocity (counts/s) and edge rate (Hz).
+      // Updated in the quadrature ISR via onEdgeISR().
+      inline float getRecipVelocityCPS() const { return vRec_cps; }
+      inline float getRecipEdgeRateHz() const  { return fRec_hz; }
+
+      // ISR hook: call this on each valid quadrature edge after quadratureCount += dir.
+      // dir = +1 / -1 (signed motor edge)
+      IRAM_ATTR inline void onEdgeISR(int dir) {
+        uint32_t now = micros();
+        uint32_t dt  = now - lastEdgeUs;            // unsigned handles wrap
+        if (lastEdgeUs != 0 && dt > RECIP_MIN_PULSE_US) {
+          float f = 1e6f / (float)dt;               // edges/s
+          fRec_hz  = f;
+          vRec_cps = f * (float)dir;                // counts/s (signed)
+        }
+        lastEdgeUs = now;
+      }
+    #endif
 
     // total number of errors
     uint32_t totalErrorCount = 0;
@@ -175,6 +209,18 @@ class Encoder {
       volatile uint32_t nsNext = 0;
       volatile uint32_t nsInvalidMillis = 0;
     #endif
+
+   // Tracking flag (true when tracking, false when slewing)
+   volatile bool trackingHint = false;
+
+
+    #if ENCODER_RECIP_USE_IN_TRACKING
+      // Reciprocal state (volatile: written in ISR, read in poll)
+      volatile uint32_t lastEdgeUs = 0;
+      volatile float    vRec_cps   = 0.0f;
+      volatile float    fRec_hz    = 0.0f;
+    #endif
+
 };
 
 #endif
