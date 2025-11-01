@@ -10,6 +10,12 @@
 #define MESU_MAXPCB4 1  // I use this in PE.cpp  so that we do not mess with pin38 PWM emulation if not needed.
 
 // ---------- Axis 1 (RA/Azm) ----------
+// TODO! There are 4 hardware quadrature encoder channels available the Teensy 4.x.
+// The Teensy 4.x Encoders are supported on pins: 0, 1, 2, 3, 4, 5, 7, 8, 30, 31 and 33.
+// On the T4.1 the following additional pins are supported: 36 and 37
+// Plan to upgrade to AEDT-9810 4000 CPR encoders
+// https://github.com/mjs513/Teensy-4.x-Quad-Encoder-Library
+
 #define AXIS1_ENCODER_A_PIN   AXIS1_DIR_PIN   // Teensy 39
 #define AXIS1_ENCODER_B_PIN   AXIS1_STEP_PIN  // Teensy 38
 
