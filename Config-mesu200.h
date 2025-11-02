@@ -67,7 +67,7 @@
 // valid values for teensy 4.1 https://www.pjrc.com/teensy/td_pulse.html
 #define SERVO_ANALOG_WRITE_FREQUENCY 18310.55
 #define SERVO_ANALOG_WRITE_RANGE 8191
-#define SERVO_SAFETY_DISABLE TRUE
+//#define SERVO_SAFETY_DISABLE TRUE
 
 #define SERVO_SIGMA_DELTA_DITHERING
 #define SERVO_HYSTERESIS_ENABLE
