@@ -313,7 +313,13 @@ void ServoMotor::poll() {
 
     // directly use fixed PWM value during calibration
     #ifdef CALIBRATE_SERVO_DC
-      velocity = calibrateVelocity->experimentMode ? calibrateVelocity->experimentPwm*velocityMax / 100.0F : control->out;
+      if (calibrateVelocity->experimentMode) {
+        // experimentVel is in PERCENT of max velocity, convert to cps
+        velocity = (calibrateVelocity->experimentVelocity / 100.0F) * velocityMax;
+      } else {
+        // your normal control path; keep whatever you used before
+        velocity = control->out + currentDirection*currentFrequency;
+      }
     #else
       velocity = control->out + currentDirection*currentFrequency;
     #endif
