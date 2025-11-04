@@ -72,11 +72,10 @@
 #define SERVO_SIGMA_DELTA_DITHERING
 
 #define SERVO_HYSTERESIS_ENABLE
-// must exceed this to LEAVE zero (e.g., ~1/5 of sidereal speed of 92 counts / sec)
+// must exceed this to LEAVE zero state
 #define SERVO_HYST_ENTER_CPS 3.0f
-// drop below this to RETURN to zero (half of the above)
+// drop below this to RETURN to zero
 #define SERVO_HYST_EXIT_CPS 1.0f
-
 
 #define SERVO_STICTION_KICK
 // multiplier over velocityMin
@@ -85,6 +84,12 @@
 #define SERVO_STICTION_KICK_MS 20
 // stop kicking if movement is more than (so there is movement)
 #define SERVO_STICTION_KICK_MOVE_COUNTS 2
+
+// Nonlinear concave mapping near zero (further help kick)
+// For the future create a mapping over the whole range of the motor/axis for different loads
+#define SERVO_NONLINEAR_ENABLE 0
+#define SERVO_NONLINEAR_GAMMA 0.65f    // concave (0.5–0.8 is a good range)
+#define SERVO_NONLINEAR_KNEE_CPS 20.0f // needs tuning
 
 //#define ENCODER_RECIP_USE_IN_TRACKING
 
