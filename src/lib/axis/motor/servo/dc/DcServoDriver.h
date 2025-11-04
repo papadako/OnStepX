@@ -43,6 +43,17 @@
   #endif
 #endif
 
+// Nonlinear concave mapping near zero (further help kick)
+#ifndef SERVO_NONLINEAR_ENABLE
+  #define SERVO_NONLINEAR_ENABLE 0
+#endif
+#ifndef SERVO_NONLINEAR_GAMMA
+  #define SERVO_NONLINEAR_GAMMA 0.65f    // concave (0.5–0.8 is a good range)
+#endif
+#ifndef SERVO_NONLINEAR_KNEE_CPS
+  #define SERVO_NONLINEAR_KNEE_CPS 25.0f // tune
+#endif
+
 #include "../ServoDriver.h"
 
 class ServoDcDriver : public ServoDriver {
@@ -129,8 +140,24 @@ class ServoDcDriver : public ServoDriver {
         sign = (zeroHoldSign < 0) ? -1 : 1;
       #endif
 
+      float countsF;
+      const float v_knee = SERVO_NONLINEAR_KNEE_CPS;
+      const float gamma  = SERVO_NONLINEAR_GAMMA;
+
+      // TODO! Another option is to make the calibration code create a map based on current load and type of mount
+      // I expect differences in the mapping for friction mounts vs other mounts with no stiction
+      if (SERVO_NONLINEAR_ENABLE && gamma > 0.0f && gamma < 1.0f && vAbs > 0.0f && vAbs < v_knee) {
+        // Concave: more PWM than linear for tiny velocities
+        // countsF = velToCountsGain * v * (v / v_knee)^(gamma - 1)
+        float t = vAbs / v_knee;                 // 0..1
+        float scale = powf(fmaxf(t, 1e-6f), gamma - 1.0f);
+        countsF = velToCountsGain * vAbs * scale;
+      } else {
+        // Linear above knee (or if disabled)
+        countsF = vAbs * velToCountsGain; // target in [0 .. countsMaxCached]
+      }
+
       // Linear map WITHOUT offset
-      float countsF = vAbs * velToCountsGain; // target in [0 .. countsMaxCached]
 
       #ifdef SERVO_SIGMA_DELTA_DITHERING
         // Dither the floating counts to an integer so the time-average equals countsF.
