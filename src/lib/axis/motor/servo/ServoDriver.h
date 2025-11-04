@@ -85,6 +85,13 @@ class ServoDriver {
     // get the driver name
     virtual const char* name() { return NULL; }
 
+    #ifdef SERVO_STICTION_KICK
+    // Kick awareness hooks (no-ops by default)
+    virtual bool isKickActive() const { return false; }
+    virtual bool didKickJustStart() const { return false; }
+    virtual void cancelKickEarly() {}
+  #endif
+
   protected:
     virtual void readStatus() {}
 

@@ -305,6 +305,36 @@ void ServoMotor::poll() {
 
   encoderCounts = filter->update(encoderCounts, motorCounts, isTracking);
 
+  // If we are using servo stiction kick check if we are moving
+  #ifdef SERVO_STICTION_KICK
+    // Currently only supported by ServoDcDriver
+      const bool kickActive = driver->isKickActive();
+
+      // Arm observation when the kick begins
+      if (!kickObsArmed && (kickActive || driver->didKickJustStart())) {
+        kickObsArmed    = true;
+        kickObsStartCnt = encoderCounts;      // snapshot encoder at kick start
+      }
+
+      // While kick active, look for movement
+      if (kickObsArmed && kickActive) {
+        long delta = labs(encoderCounts - kickObsStartCnt);
+
+        // check if counts changed
+        bool moved = (delta >= SERVO_STICTION_KICK_MOVE_COUNTS);
+
+        if (moved) {
+          driver->cancelKickEarly();    // stop enforcing the breakaway minimum
+          kickObsArmed = false;         // disarm until next kick
+        }
+      }
+
+      // If kick ended naturally, disarm
+      if (kickObsArmed && !kickActive) {
+        kickObsArmed = false;
+      }
+  #endif
+
   control->set = motorCounts;
   control->in = encoderCounts;
   float velocity;

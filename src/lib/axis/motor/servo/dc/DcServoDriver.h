@@ -69,6 +69,33 @@ class ServoDcDriver : public ServoDriver {
       #endif
     }
 
+    #ifdef SERVO_STICTION_KICK
+      // Kick awareness (override base hooks)
+      bool isKickActive() const override {
+        #ifdef SERVO_STICTION_KICK
+          if (kickUntilMs == 0) return false;
+          return (int32_t)(millis() - kickUntilMs) < 0;
+        #else
+          return false;
+        #endif
+      }
+
+      bool didKickJustStart() const override {
+        #ifdef SERVO_STICTION_KICK
+          return kickJustStarted;
+        #else
+          return false;
+        #endif
+      }
+
+      void cancelKickEarly() override {
+        #ifdef SERVO_STICTION_KICK
+          kickUntilMs = 0;
+          kickJustStarted = false;
+        #endif
+      }
+    #endif
+
   protected:
     // convert from encoder counts per second to analogWriteRange units to roughly match velocity
     // we expect a linear scaling for the motors (maybe in the future we can be smarter?)
@@ -155,18 +182,22 @@ class ServoDcDriver : public ServoDriver {
 
           if (leaveZero || dirFlip) {
             kickUntilMs = now + SERVO_STICTION_KICK_MS;
+            kickJustStarted = true;
           }
 
           // If we are within the kick window, enforce the breakaway minimum
           if (kickUntilMs != 0 && (int32_t)(now - kickUntilMs) < 0) {
+            kickJustStarted = false;
             if (power > 0 && power < countsBreakCached) power = countsBreakCached;
           } else {
             kickUntilMs = 0; // window expired
+            kickJustStarted = false;
             if (power > 0 && power < countsMinCached) power = countsMinCached;
           }
         } else {
           // Not in tracking mode: no kick, just sustaining minimum
           kickUntilMs = 0;
+          kickJustStarted = false;
           if (power > 0 && power < countsMinCached) power = countsMinCached;
         }
 
@@ -260,7 +291,8 @@ class ServoDcDriver : public ServoDriver {
       int8_t   lastSign        = 0;   // -1, 0, +1 of lastPowerCounts
       uint32_t kickUntilMs     = 0;   // time until which we keep kicking
       int32_t  countsBreakCached = 0; // breakaway minimum in counts (recomputed with scaling)
-      bool kickAllowedByMode = false;  // set via setTrackingMode()
+      bool kickAllowedByMode = false; // set via setTrackingMode()
+      bool kickJustStarted = false;   // set true only on the frame we open a new window
     #endif
 };
 
