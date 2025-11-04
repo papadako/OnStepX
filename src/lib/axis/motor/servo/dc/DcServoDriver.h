@@ -132,28 +132,38 @@ class ServoDcDriver : public ServoDriver {
       float vAbs = velocity; // already absolute
       if (vAbs > velocityMaxCached) vAbs = velocityMaxCached;
 
+      // before checking hysterisis, checki if we are kicking
+      #ifdef SERVO_STICTION_KICK
+        const bool kickWindowActive =
+          (kickUntilMs != 0) && ((int32_t)(millis() - kickUntilMs) < 0);
+      #else
+        const bool kickWindowActive = false;
+      #endif
+
       #ifdef SERVO_HYSTERESIS_ENABLE
-        // Hysteresis around zero: require a larger enter threshold to leave zero,
-        // and a smaller "exit" threshold to return to zero. This prevents chatter
-        // when the PID jitters around zero
-        if (zeroHoldSign == 0) {
-          // currently at zero: must exceed enter threshold to start moving
-          if (vAbs < SERVO_HYST_ENTER_CPS) return 0;
-          zeroHoldSign = (sign >= 0) ? 1 : -1; // latch direction
-        } else {
-          // currently moving: if we drop below exit threshold, snap back to zero
-          if (vAbs < SERVO_HYST_EXIT_CPS) {
-            zeroHoldSign = 0;
-            #ifdef SERVO_SIGMA_DELTA_DITHERING
-              sigmaDelta.reset(); // also reset when snapping back to zero
-            #endif
-            return 0;
+        if (!kickWindowActive) { // Id we are not kicking
+          // Hysteresis around zero: require a larger enter threshold to leave zero,
+          // and a smaller "exit" threshold to return to zero. This prevents chatter
+          // when the PID jitters around zero
+          if (zeroHoldSign == 0) {
+            // currently at zero: must exceed enter threshold to start moving
+            if (vAbs < SERVO_HYST_ENTER_CPS) return 0;
+            zeroHoldSign = (sign >= 0) ? 1 : -1; // latch direction
+          } else {
+            // currently moving: if we drop below exit threshold, snap back to zero
+            if (vAbs < SERVO_HYST_EXIT_CPS) {
+              zeroHoldSign = 0;
+              #ifdef SERVO_SIGMA_DELTA_DITHERING
+                sigmaDelta.reset(); // also reset when snapping back to zero
+              #endif
+              return 0;
+            }
+            // allow direction change if command flips while above thresholds
+            if ((sign >= 0 ? 1 : -1) != zeroHoldSign) zeroHoldSign = (sign >= 0) ? 1 : -1;
           }
-          // allow direction change if command flips while above thresholds
-          if ((sign >= 0 ? 1 : -1) != zeroHoldSign) zeroHoldSign = (sign >= 0) ? 1 : -1;
+          // use latched direction while moving
+          sign = (zeroHoldSign < 0) ? -1 : 1;
         }
-        // use latched direction while moving
-        sign = (zeroHoldSign < 0) ? -1 : 1;
       #endif
 
       // Linear map WITHOUT offset
