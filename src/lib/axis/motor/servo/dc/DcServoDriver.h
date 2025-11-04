@@ -143,16 +143,21 @@ class ServoDcDriver : public ServoDriver {
       float vAbs = velocity; // already absolute
       if (vAbs > velocityMaxCached) vAbs = velocityMaxCached;
 
-      // before checking hysterisis, checki if we are kicking
+      // before checking hysterisis, check if we are kicking
       #ifdef SERVO_STICTION_KICK
+        const uint32_t now = millis();
         const bool kickWindowActive =
-          (kickUntilMs != 0) && ((int32_t)(millis() - kickUntilMs) < 0);
+          (kickUntilMs != 0) && ((int32_t)(now - kickUntilMs) < 0);
+        const int reqSign = (sign >= 0) ? +1 : -1;
+        // Unified direction change detection
+        const bool directionChanged = (lastSign != 0 && reqSign != lastSign);
       #else
         const bool kickWindowActive = false;
+        const bool directionChanged = false;
       #endif
 
       #ifdef SERVO_HYSTERESIS_ENABLE
-        if (!kickWindowActive) { // Id we are not kicking
+        if (!kickWindowActive) { // If we are not kicking
           // Hysteresis around zero: require a larger enter threshold to leave zero,
           // and a smaller "exit" threshold to return to zero. This prevents chatter
           // when the PID jitters around zero
@@ -207,15 +212,12 @@ class ServoDcDriver : public ServoDriver {
       #endif
 
       #ifdef SERVO_STICTION_KICK
-        const uint32_t now = millis();
-        const int reqSign = (sign >= 0) ? +1 : -1;
-
         if (kickAllowedByMode) {
           // Start a stiction kick ?
           // We kick when we are at rest (lastPowerCounts == 0) and receive a nonzero request,
           // or when we flip direction.
           bool leaveZero   = (lastPowerCounts == 0) && (power > 0);
-          bool dirFlip     = (lastSign != 0 && reqSign != lastSign);
+          bool dirFlip     = directionChanged;
 
           if (leaveZero || dirFlip) {
             kickUntilMs = now + SERVO_STICTION_KICK_MS;
