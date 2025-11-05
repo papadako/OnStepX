@@ -31,6 +31,10 @@
 #ifdef SERVO_NONLINEAR_ENABLE
   #undef SERVO_NONLINEAR_ENABLE
 #endif
+// stop tracking
+#ifdef TRACK_AUTOSTART
+  #undef TRACK_AUTOSTART
+#endif
 
 // --- Small inline helpers ---------------------------------------------------
 
