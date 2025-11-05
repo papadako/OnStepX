@@ -24,7 +24,7 @@
 
 // Tolerances (stability guards)
 #define SERVO_CALIBRATION_STICTION_REFINE_ABS 0.01f           // % velocity
-#define SERVO_CALIBRATION_STICTION_REFINE_REL 0.10f           // 10% of ceiling
+#define SERVO_CALIBRATION_STICTION_REFINE_REL 0.10f           // 10% of base (ceiling/u_break)
 #define SERVO_CALIBRATION_REFINE_MAX_ITERATIONS 200           // Safeguard iteration cap
 
 // Lower bound as % of ceiling when sweeping DOWN to find u_break
@@ -36,15 +36,13 @@
 #define SERVO_CALIBRATION_UBREAK_STEP_PERCENT 0.01f  // step DOWN from ceiling to find u_break
 #define SERVO_CALIBRATION_UHOLD_STEP_PERCENT  0.005f // step DOWN from u_break to find u_hold (after kick)
 
-#define SERVO_CALIBRATION_ERROR_THRESHOLD 5.0f                 // (kept for logs)
 #define SERVO_CALIBRATION_IMBALANCE_ERROR_THRESHOLD 2.0f       // Fwd/Rev imbalance warning threshold
-
 #define SERVO_CALIBRATION_VELOCITY_MEASURE_WINDOW_MS 1500      // window for steady measurement
 #define SERVO_CALIBRATION_MIN_DETECTABLE_VELOCITY 0.01f        // steps/sec minimum movement threshold
 #define SERVO_CALIBRATION_STICTION_SAMPLE_INTERVAL_MS  1000    // short debounce to avoid a single noisy read
 
 
-// Calibration states (renamed for clarity)
+// Calibration states (clarity: ceiling / u_break / u_hold)
 enum CalibrationState {
   CALIBRATION_IDLE,
   CALIBRATION_CEILING,       // staircase UP → ceiling (upper stiction bound)
@@ -62,8 +60,8 @@ public:
 
   // Results (percent commands)
   float getCeiling(bool forward); // unchanged name
-  float getUBreak(bool forward);  // old floor
-  float getUHold(bool forward);   // old tracking
+  float getUBreak(bool forward);  // old floor: min % that starts motion from rest
+  float getUHold(bool forward);   // old tracking: min % that maintains motion after a kick
 
   bool experimentMode;
   float experimentVelocity;
@@ -81,6 +79,35 @@ private:
     MOTOR_RUNNING_STEADY
   };
 
+  // Small helpers to cut duplication
+  enum Dir { FWD = 0, REV = 1 };
+  inline Dir   dir()      const { return calibrationDirectionIsForward ? FWD : REV; }
+  inline float dirSign()  const { return calibrationDirectionIsForward ? +1.0f : -1.0f; }
+  inline void  logDirPrefix() const;
+  inline float clampPct(float pct) const {
+    return constrain(pct, -SERVO_CALIBRATION_STOP_VELOCITY_PERCENT,
+                          +SERVO_CALIBRATION_STOP_VELOCITY_PERCENT);
+  }
+  inline float tolFor(float base) const {
+    return fmaxf(SERVO_CALIBRATION_STICTION_REFINE_ABS,
+                 SERVO_CALIBRATION_STICTION_REFINE_REL * base);
+  }
+
+  struct Measurement {
+    bool  ready;
+    float avgVel;   // steps/s
+    long  counts;   // encoder counts in window
+  };
+  Measurement measureWindow(unsigned long now,
+                            unsigned long startMs,
+                            long startTicks,
+                            long curTicks,
+                            unsigned long windowMs) const;
+
+  void kickAndQueue(CalibrationState nextState,
+                    float kickPctAbs,
+                    float testPctAbsSigned);
+
   // Core methods
   void handleMotorState();
   void processCeiling();       // staircase UP → ceiling
@@ -89,7 +116,7 @@ private:
   void processImbalanceCheck();
   void handleCalibrationFailure();
 
-  // Helper methods
+  // Motor/measure utilities
   float calculateInstantaneousVelocity();
   void startSettling();
   void startTest(float velocityPercent);
@@ -97,17 +124,11 @@ private:
   void transitionToUBreak();   // sets up downward sweep for u_break
   void resetCalibrationValues();
 
-  inline float clampPct(float pct) const {
-    return constrain(pct,
-      -SERVO_CALIBRATION_STOP_VELOCITY_PERCENT,
-      +SERVO_CALIBRATION_STOP_VELOCITY_PERCENT);
-  }
-
   // Configuration
-  ServoDcDriver* driver = nullptr;
+  ServoDcDriver* driver = nullptr; // kept for future use
 
   uint8_t axisNumber;
-  char axisPrefix[16]; // For logging
+  char axisPrefix[32]; // For logging (avoid overflow with "AxisXX ServoCalibration")
 
   // State tracking
   CalibrationState calibrationState;
@@ -129,55 +150,38 @@ private:
   unsigned long steadySinceMs;
   long steadyStartTicks;
 
-  // Calibration parameters
+  // Calibration parameters (shared across phases)
   float calibrationVelocity;          // signed (%)
   float calibrationMinVelocity;       // abs % (lower bound for u_break sweep)
   float calibrationMaxVelocity;       // abs % (ceiling)
-  float targetVelocity;               // desired tracking magnitude (counts/sec), only for logs
 
   // Results (magnitudes, %)
-  float ceilingFwd;   // upper bound % that first sustained motion was observed at (FWD)
-  float uBreakFwd;    // old floor (min % that starts moving from rest)
-  float uHoldFwd;     // old tracking (min % that maintains motion after kick)
-  float ceilingRev;
-  float uBreakRev;
-  float uHoldRev;
+  float ceiling[2];   // upper bound % that produced sustained motion from rest
+  float uBreak[2];    // min % that starts motion from rest (old floor)
+  float uHold[2];     // min % that maintains motion after a kick (old tracking)
 
   // Measured velocities (steps/s) & counts captured for report
-  float ceilingVelFwd;
-  float uBreakVelFwd;
-  float uHoldVelFwd;
-  long  ceilingCountsFwd;
-  long  uBreakCountsFwd;
-  long  uHoldCountsFwd;
+  float measCeilVel[2];
+  long  measCeilCnt[2];
+  float measUBreakVel[2];
+  long  measUBreakCnt[2];
+  float measUHoldVel[2];
+  long  measUHoldCnt[2];
 
-  float ceilingVelRev;
-  float uBreakVelRev;
-  float uHoldVelRev;
-  long  ceilingCountsRev;
-  long  uBreakCountsRev;
-  long  uHoldCountsRev;
-
-  // Bookkeeping for best samples (kept for report)
-  float bestAvgVel;
-  long  bestCounts;
+  // Bookkeeping per direction
+  bool everMoved[2];
+  int  uBreakIters[2];
+  int  uHoldIters[2];
+  float lastGoodUBreakAbs[2];
+  float lastGoodUHoldAbs[2];
 
   long lastTicks;
   unsigned long lastCheckTime;
 
-  bool everMovedFwd;
-  bool everMovedRev;
-  int refineIters;  // guard against infinite loops
-
-  // u_hold staircase bookkeeping
-  int   holdIters;
-  float lastGoodUHoldAbs;
-
-  // Staircase bookkeeping
-  float stairStep;         // abs %
-  float uBreakStep;        // abs %
-  float uHoldStep;         // abs %
-  float lastGoodUBreakAbs; // abs % (best working while sweeping down from ceiling)
+  // Staircase step sizes (absolute %)
+  float stairStep;
+  float uBreakStep;
+  float uHoldStep;
 
   // A tiny queue for kickstarting / settling the motor before a test
   bool hasQueuedTest = false;

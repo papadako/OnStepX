@@ -16,6 +16,7 @@
 // After both directions are calibrated, an imbalance check is performed.
 
 #include "TrackingVelocity.h"
+#include <math.h>  // fabsf, fmaxf, fminf
 
 #if defined(SERVO_MOTOR_PRESENT) && defined(CALIBRATE_SERVO_DC)
 
@@ -23,14 +24,46 @@
 #ifdef SERVO_HYSTERESIS_ENABLE
   #undef SERVO_HYSTERESIS_ENABLE
 #endif
-
 #ifdef SERVO_STICTION_KICK
   #undef SERVO_STICTION_KICK
 #endif
-
 #ifdef SERVO_NONLINEAR_ENABLE
   #undef SERVO_NONLINEAR_ENABLE
 #endif
+
+// --- Small inline helpers ---------------------------------------------------
+
+inline void ServoCalibrateTrackingVelocity::logDirPrefix() const {
+  V(axisPrefix); VF(calibrationDirectionIsForward ? " FWD" : " REV");
+}
+
+ServoCalibrateTrackingVelocity::Measurement
+ServoCalibrateTrackingVelocity::measureWindow(unsigned long now,
+                                              unsigned long startMs,
+                                              long startTicks,
+                                              long curTicks,
+                                              unsigned long windowMs) const {
+  Measurement m{false, 0.0f, 0};
+  unsigned long dt = now - startMs;
+  if (dt < windowMs) return m;
+  m.ready  = true;
+  m.counts = curTicks - startTicks;
+  m.avgVel = (float)m.counts / (dt / 1000.0f);
+  return m;
+}
+
+void ServoCalibrateTrackingVelocity::kickAndQueue(CalibrationState nextState,
+                                                  float kickPctAbs,
+                                                  float testPctAbsSigned) {
+  queueNextTest(nextState, testPctAbsSigned);
+  setVelocity(dirSign() * kickPctAbs); // kick at anchor (ceiling/u_break)
+  motorState = MOTOR_ACCELERATING;
+  lastStateChangeTime = currentTime;
+  lastVelocityTime = currentTime;
+  lastVelocityMeasurement = 0;
+}
+
+// --- Class ------------------------------------------------------------------
 
 ServoCalibrateTrackingVelocity::ServoCalibrateTrackingVelocity(uint8_t axisNumber) {
   this->axisNumber = axisNumber;
@@ -60,21 +93,11 @@ void ServoCalibrateTrackingVelocity::init() {
   steadyStartTicks = 0;
 
   enabled = false;
-  everMovedFwd = false;
-  everMovedRev = false;
-
-  bestAvgVel = 0.0f;
-  bestCounts = 0;
-
-  refineIters = 0;
-  holdIters = 0;
 
   // staircase step sizes (absolute %)
-  stairStep      = fabsf(SERVO_CALIBRATION_STAIR_STEP_PERCENT);
-  uBreakStep     = fabsf(SERVO_CALIBRATION_UBREAK_STEP_PERCENT);
-  uHoldStep      = fabsf(SERVO_CALIBRATION_UHOLD_STEP_PERCENT);
-  lastGoodUHoldAbs  = 0.0f;
-  lastGoodUBreakAbs = 0.0f;
+  stairStep  = fabsf(SERVO_CALIBRATION_STAIR_STEP_PERCENT);
+  uBreakStep = fabsf(SERVO_CALIBRATION_UBREAK_STEP_PERCENT);
+  uHoldStep  = fabsf(SERVO_CALIBRATION_UHOLD_STEP_PERCENT);
 
   // setup the queue
   hasQueuedTest = false;
@@ -86,7 +109,7 @@ void ServoCalibrateTrackingVelocity::init() {
   startSettling();
 }
 
-void ServoCalibrateTrackingVelocity::start(float trackingFrequency, long /*instrumentCoordinateSteps*/) {
+void ServoCalibrateTrackingVelocity::start(float /*trackingFrequency*/, long /*instrumentCoordinateSteps*/) {
   if (!(CALIBRATE_SERVO_AXIS_SELECT & (1 << (axisNumber - 1)))) {
     VF("MSG: "); V(axisPrefix); VLF(" Calibration skipped for this axis");
     return;
@@ -101,7 +124,6 @@ void ServoCalibrateTrackingVelocity::start(float trackingFrequency, long /*instr
   calibrationState = CALIBRATION_CEILING;
   motorState = MOTOR_STOPPED;
   calibrationVelocity = SERVO_CALIBRATION_START_VELOCITY_PERCENT;
-  targetVelocity = trackingFrequency; // only for logs
   lastStateChangeTime = millis();
 
   // Start by stopping motor and waiting for settle
@@ -157,14 +179,14 @@ void ServoCalibrateTrackingVelocity::updateState(long instrumentCoordinateSteps)
 // Private helper methods //////////////////////////////////////////////////////
 
 void ServoCalibrateTrackingVelocity::handleMotorState() {
-  float currentVelocity = 0.0;
+  float currentVelocity = 0.0f;
   switch (motorState) {
     case MOTOR_SETTLING:
       // check also the velocity
       currentVelocity = calculateInstantaneousVelocity();
       if (currentTime - settleStartTime >= SERVO_CALIBRATION_MOTOR_SETTLE_TIME) {
         motorState = MOTOR_STOPPED;
-        V(axisPrefix); VF(": Motor settled to STOPPED_STATE"); VF(" Vel="); V(currentVelocity); VL(" steps/s");
+        V(axisPrefix); VF(": Motor settled to STOPPED_STATE"); VF(" v="); V(currentVelocity); VL(" steps/s");
 
         // NOW safe to start the next test, if any
         if (hasQueuedTest) {
@@ -175,7 +197,6 @@ void ServoCalibrateTrackingVelocity::handleMotorState() {
       }
       lastVelocityMeasurement = currentVelocity;
       lastVelocityTime = currentTime;
-
       break;
 
     case MOTOR_ACCELERATING:
@@ -195,9 +216,7 @@ void ServoCalibrateTrackingVelocity::handleMotorState() {
           steadySinceMs = currentTime;
           steadyStartTicks = currentTicks;
 
-          V(axisPrefix);
-          if (calibrationDirectionIsForward) { VF(" FWD"); } else { VF(" REV"); }
-          VF(": STEADY_STATE  @%="); V(calibrationVelocity);
+          logDirPrefix(); VF(": STEADY_STATE  @%="); V(calibrationVelocity);
           VF(" v="); V(currentVelocity); VL(" steps/s");
 
           if (hasQueuedTest) {
@@ -211,9 +230,7 @@ void ServoCalibrateTrackingVelocity::handleMotorState() {
           calibrationStepStartTime = currentTime;
           calibrationStepStartTicks = currentTicks;
 
-          V(axisPrefix);
-          if (calibrationDirectionIsForward) { VF(" FWD"); } else { VF(" REV"); }
-          VF(": STOPPED_STATE  @%="); V(calibrationVelocity);
+          logDirPrefix(); VF(": STOPPED_STATE  @%="); V(calibrationVelocity);
           VF(" v="); V(currentVelocity); VL(" steps/s");
         }
 
@@ -260,9 +277,10 @@ float ServoCalibrateTrackingVelocity::calculateInstantaneousVelocity() {
 
 // Staircase UP: find ceiling (first sustained movement).
 void ServoCalibrateTrackingVelocity::processCeiling() {
-  const float sign = calibrationDirectionIsForward ? +1.0f : -1.0f;
+  const float sign = dirSign();
 
   if (motorState == MOTOR_RUNNING_STEADY) {
+    // sustained movement window for "ceiling found"
     unsigned long steadyElapsedMs = currentTime - steadySinceMs;
     if (steadyElapsedMs < SERVO_CALIBRATION_STICTION_SAMPLE_INTERVAL_MS) return;
 
@@ -272,21 +290,12 @@ void ServoCalibrateTrackingVelocity::processCeiling() {
 
     if (fabsf(avgVel) > SERVO_CALIBRATION_MIN_DETECTABLE_VELOCITY) {
       float absVelocity = fabsf(calibrationVelocity);
-      float& ceilingRef = calibrationDirectionIsForward ? ceilingFwd : ceilingRev;
-      if (calibrationDirectionIsForward) {
-        everMovedFwd = true;
-        ceilingVelFwd = avgVel;
-        ceilingCountsFwd = dCounts;
-      } else {
-        everMovedRev = true;
-        ceilingVelRev = avgVel;
-        ceilingCountsRev = dCounts;
-      }
-      ceilingRef = absVelocity;
+      ceiling[dir()] = absVelocity;
+      measCeilVel[dir()] = avgVel;
+      measCeilCnt[dir()] = dCounts;
+      everMoved[dir()] = true;
 
-      V(axisPrefix);
-      if (calibrationDirectionIsForward) { VF(" FWD"); } else { VF(" REV"); }
-      VF(" ceiling found @ %="); V(calibrationVelocity);
+      logDirPrefix(); VF(" ceiling found @ %="); V(calibrationVelocity);
       VF(" (v="); V(avgVel); VL(" steps/s)");
 
       setVelocity(0);
@@ -298,20 +307,18 @@ void ServoCalibrateTrackingVelocity::processCeiling() {
     }
   }
 
-  // step up if not yet moving
+  // step up if not yet moving or after wait
   if (motorState == MOTOR_STOPPED || motorState == MOTOR_RUNNING_STEADY) {
     if (currentTime - lastVelocityTime < SERVO_CALIBRATION_STICTION_SAMPLE_INTERVAL_MS) return;
 
-    float nextAbs = fminf(fabsf(calibrationVelocity) + stairStep, SERVO_CALIBRATION_STOP_VELOCITY_PERCENT);
+    float nextAbs = fminf(fabsf(calibrationVelocity) + stairStep,
+                          SERVO_CALIBRATION_STOP_VELOCITY_PERCENT);
     calibrationVelocity = sign * nextAbs;
 
     if (nextAbs >= SERVO_CALIBRATION_STOP_VELOCITY_PERCENT) {
-      float& ceilingRef = calibrationDirectionIsForward ? ceilingFwd : ceilingRev;
-      ceilingRef = SERVO_CALIBRATION_STOP_VELOCITY_PERCENT;
-      bool ever = calibrationDirectionIsForward ? everMovedFwd : everMovedRev;
-      if (!ever) {
-        V(axisPrefix); VF(calibrationDirectionIsForward ? " FWD" : " REV");
-        VLF(" ceiling not found up to limit – skipping u_break/u_hold");
+      ceiling[dir()] = SERVO_CALIBRATION_STOP_VELOCITY_PERCENT;
+      if (!everMoved[dir()]) {
+        logDirPrefix(); VLF(" ceiling not found up to limit – skipping u_break/u_hold");
         setVelocity(0);
         startSettling();
         if (calibrationDirectionIsForward) {
@@ -335,20 +342,25 @@ void ServoCalibrateTrackingVelocity::transitionToUBreak() {
   calibrationState = CALIBRATION_UBREAK;
   lastStateChangeTime = currentTime;
 
-  const float ceilingAbs = calibrationDirectionIsForward ? ceilingFwd : ceilingRev;
+  const float ceilingAbs = ceiling[dir()];
 
   // Sweep bounds: down from ceiling to a lower bound
   calibrationMaxVelocity = ceilingAbs; // start here
   calibrationMinVelocity = SERVO_CALIBRATION_VELOCITY_SEARCH_MIN_FACTOR * ceilingAbs; // lower bound
   if (calibrationMinVelocity < 0.0f) calibrationMinVelocity = 0.0f;   // safety clamp
 
+  // Clamp step to a sensible fraction of the span so tiny ceilings don't skip range in one hop
+  if (ceilingAbs > 0.0f) {
+    uBreakStep = fminf(uBreakStep, 0.25f * ceilingAbs);
+  }
+
   // Start at ceiling
   float startAbs = calibrationMaxVelocity;
   if (startAbs <= 0.0f) startAbs = stairStep; // avoid zero
-  calibrationVelocity = (calibrationDirectionIsForward ? +startAbs : -startAbs);
+  calibrationVelocity = dirSign() * startAbs;
 
-  refineIters = 0;
-  lastGoodUBreakAbs = 0.0f;
+  uBreakIters[dir()] = 0;
+  lastGoodUBreakAbs[dir()] = 0.0f;
 
   startTest(calibrationVelocity);
 }
@@ -356,129 +368,80 @@ void ServoCalibrateTrackingVelocity::transitionToUBreak() {
 // u_break via staircase (DOWNWARD): start at ceiling and decrement by uBreakStep.
 // The u_break is the lowest % that still moves from rest: last steady before stall.
 void ServoCalibrateTrackingVelocity::processUBreak() {
-  if (++refineIters > SERVO_CALIBRATION_REFINE_MAX_ITERATIONS) {
+  if (++uBreakIters[dir()] > SERVO_CALIBRATION_REFINE_MAX_ITERATIONS) {
     VLF("WARN: u_break sweep iteration cap reached; using last good / ceiling");
-    float decider = (lastGoodUBreakAbs > 0.0f) ? lastGoodUBreakAbs : calibrationMaxVelocity;
-    float& uBreakRef = calibrationDirectionIsForward ? uBreakFwd : uBreakRev;
-    uBreakRef = decider;
+    float decider = (lastGoodUBreakAbs[dir()] > 0.0f) ? lastGoodUBreakAbs[dir()] : calibrationMaxVelocity;
+    uBreak[dir()] = decider;
 
-    // measured velocity & counts from last state
-    if (calibrationDirectionIsForward) {
-      uBreakVelFwd    = lastVelocityMeasurement;
-      uBreakCountsFwd = lastDeltaCounts;
-    } else {
-      uBreakVelRev    = lastVelocityMeasurement;
-      uBreakCountsRev = lastDeltaCounts;
+    // measured velocity & counts (fall back to last instant if needed)
+    if (measUBreakVel[dir()] == 0.0f) {
+      measUBreakVel[dir()] = lastVelocityMeasurement;
+      measUBreakCnt[dir()] = lastDeltaCounts;
     }
-
 
     // proceed to u_hold search
     calibrationState = CALIBRATION_UHOLD_SEARCH;
-    holdIters = 0;
-    lastGoodUHoldAbs = decider; // conservative
-    bestAvgVel = 0.0f;
-    bestCounts = 0;
+    uHoldIters[dir()] = 0;
+    lastGoodUHoldAbs[dir()] = decider;
 
-    // queue a first test just below u_break
+    // queue a first test just below u_break, kick then test
     const float firstBelow = fmaxf(stairStep, decider - uHoldStep);
-    const float signedNext = (calibrationDirectionIsForward ? +firstBelow : -firstBelow);
-    queueNextTest(CALIBRATION_UHOLD_SEARCH, signedNext);
-
-    setVelocity(calibrationDirectionIsForward ? +decider : -decider); // kick at u_break
-    motorState = MOTOR_ACCELERATING;
-    lastStateChangeTime = currentTime;
-    lastVelocityTime = currentTime;
-    lastVelocityMeasurement = 0;
+    kickAndQueue(CALIBRATION_UHOLD_SEARCH, decider, dirSign() * firstBelow);
     return;
   }
 
   if (motorState != MOTOR_RUNNING_STEADY && motorState != MOTOR_STOPPED) return;
 
-  // If we are steady at current step, record it and step down further.
   if (motorState == MOTOR_RUNNING_STEADY) {
-    const unsigned long dt_ms = currentTime - calibrationStepStartTime;
-    if (dt_ms < SERVO_CALIBRATION_VELOCITY_MEASURE_WINDOW_MS) return;
+    // windowed average for consistent reporting
+    auto m = measureWindow(currentTime, calibrationStepStartTime,
+                           calibrationStepStartTicks, currentTicks,
+                           SERVO_CALIBRATION_VELOCITY_MEASURE_WINDOW_MS);
+    if (!m.ready) return;
 
-    const float elapsedSec = dt_ms / 1000.0f;
-    const long  dCounts    = currentTicks - calibrationStepStartTicks;
-    const float avgVel     = (float)dCounts / elapsedSec;
+    lastGoodUBreakAbs[dir()] = fabsf(calibrationVelocity);
+    measUBreakVel[dir()]     = m.avgVel;
+    measUBreakCnt[dir()]     = m.counts;
 
-    // use avgVel instead of lastVelocityMeasurement
-    if (calibrationDirectionIsForward) {
-      uBreakVelFwd    = avgVel;
-      uBreakCountsFwd = dCounts;
-    } else {
-      uBreakVelRev    = avgVel;
-      uBreakCountsRev = dCounts;
-    }
+    logDirPrefix(); VF(" u_break sweep: MOVE @ "); V(calibrationVelocity); VF("%, v≈");
+    V(m.avgVel); VL(" steps/s");
 
-    V(axisPrefix);
-    if (calibrationDirectionIsForward) { VF(" FWD"); } else { VF(" REV"); }
-    VF(" u_break sweep: MOVE @ "); V(calibrationVelocity); VF("%, v≈");
-    V(lastVelocityMeasurement); VL(" steps/s");
+    // Next downward step
+    float nextAbs = fmaxf(calibrationMinVelocity, lastGoodUBreakAbs[dir()] - uBreakStep);
 
-    // Compute next downward step
-    float nextAbs = fmaxf(calibrationMinVelocity, lastGoodUBreakAbs - uBreakStep);
+    // If we cannot step further down, accept lastGood as u_break and enter u_hold
+    if (nextAbs >= lastGoodUBreakAbs[dir()] - 1e-6f) {
+      uBreak[dir()] = lastGoodUBreakAbs[dir()];
 
-    // If we cannot step further down, accept lastGoodUBreakAbs as u_break
-    if (nextAbs >= lastGoodUBreakAbs - 1e-6f) {
-      float& uBreakRef = calibrationDirectionIsForward ? uBreakFwd : uBreakRev;
-      uBreakRef = lastGoodUBreakAbs;
-
-      // Move to u_hold search
       calibrationState = CALIBRATION_UHOLD_SEARCH;
-      holdIters = 0;
-      lastGoodUHoldAbs = lastGoodUBreakAbs;
+      uHoldIters[dir()] = 0;
+      lastGoodUHoldAbs[dir()] = lastGoodUBreakAbs[dir()];
 
-      // queue a first below-u_break test
-      float below = fmaxf(stairStep, lastGoodUBreakAbs - uHoldStep);
-      queueNextTest(CALIBRATION_UHOLD_SEARCH,
-                    (calibrationDirectionIsForward ? +below : -below));
-
-      // Kick at u_break then test below
-      setVelocity(calibrationDirectionIsForward ? +lastGoodUBreakAbs : -lastGoodUBreakAbs);
-      motorState = MOTOR_ACCELERATING;
-      lastStateChangeTime = currentTime;
-      lastVelocityTime = currentTime;
-      lastVelocityMeasurement = 0;
-      V(axisPrefix); VF(calibrationDirectionIsForward ? " FWD" : " REV");
-      VF(" kick: u_break %="); V(lastGoodUBreakAbs); VL("");
+      float below = fmaxf(stairStep, lastGoodUBreakAbs[dir()] - uHoldStep);
+      kickAndQueue(CALIBRATION_UHOLD_SEARCH, uBreak[dir()], dirSign() * below);
       return;
     }
 
     // Continue the downward sweep
-    calibrationVelocity = (calibrationDirectionIsForward ? +nextAbs : -nextAbs);
-    startTest(calibrationVelocity);
+    startTest(dirSign() * nextAbs);
     return;
   }
 
-  // If we STOPPED, current step is too low -> u_break = last good moving step.
+  // If we STOPPED, current step is too low -> u_break = last good moving step (or ceiling if none)
   if (motorState == MOTOR_STOPPED) {
-    float uBreakAbs = (lastGoodUBreakAbs > 0.0f) ? lastGoodUBreakAbs : calibrationMaxVelocity; // fallback to ceiling
-    float& uBreakRef = calibrationDirectionIsForward ? uBreakFwd : uBreakRev;
-    uBreakRef = uBreakAbs;
+    float uBreakAbs = (lastGoodUBreakAbs[dir()] > 0.0f) ? lastGoodUBreakAbs[dir()] : calibrationMaxVelocity;
+    uBreak[dir()] = uBreakAbs;
 
-    V(axisPrefix);
-    if (calibrationDirectionIsForward) { VF(" FWD"); } else { VF(" REV"); }
-    VF(" u_break sweep: STOP @ "); V(fabsf(calibrationVelocity)); VF("% -> u_break=");
+    logDirPrefix(); VF(" u_break sweep: STOP @ "); V(fabsf(calibrationVelocity)); VF("% -> u_break=");
     V(uBreakAbs); VLF("%");
 
     // Enter u_hold search
     calibrationState = CALIBRATION_UHOLD_SEARCH;
-    holdIters = 0;
-    lastGoodUHoldAbs = uBreakAbs;
+    uHoldIters[dir()] = 0;
+    lastGoodUHoldAbs[dir()] = uBreakAbs;
 
-    // queue a first below-u_break test
     float below = fmaxf(stairStep, uBreakAbs - uHoldStep);
-    queueNextTest(CALIBRATION_UHOLD_SEARCH,
-                  (calibrationDirectionIsForward ? +below : -below));
-
-    // Kick at u_break then test below
-    setVelocity(calibrationDirectionIsForward ? +uBreakAbs : -uBreakAbs);
-    motorState = MOTOR_ACCELERATING;
-    lastStateChangeTime = currentTime;
-    lastVelocityTime = currentTime;
-    lastVelocityMeasurement = 0;
+    kickAndQueue(CALIBRATION_UHOLD_SEARCH, uBreakAbs, dirSign() * below);
     return;
   }
 }
@@ -486,97 +449,50 @@ void ServoCalibrateTrackingVelocity::processUBreak() {
 // u_hold via staircase: kick at u_break; then step down by uHoldStep until stall.
 // Last good (steady) is taken as u_hold; also records measured avg.
 void ServoCalibrateTrackingVelocity::processUHoldSearch() {
-  if (motorState != MOTOR_RUNNING_STEADY && motorState != MOTOR_STOPPED) return;
-
-  const float uBreakAbs = calibrationDirectionIsForward ? uBreakFwd : uBreakRev;
-  const float sign      = calibrationDirectionIsForward ? +1.0f : -1.0f;
-
-  // Safety guard
-  if (++holdIters > SERVO_CALIBRATION_REFINE_MAX_ITERATIONS) {
-    float& uHoldRef = calibrationDirectionIsForward ? uHoldFwd : uHoldRev;
-    uHoldRef = (lastGoodUHoldAbs > 0.0f) ? lastGoodUHoldAbs : uBreakAbs;
-
-    if (calibrationDirectionIsForward) {
-      uHoldVelFwd = bestAvgVel != 0.0f ? bestAvgVel : uBreakVelFwd;
-      uHoldCountsFwd = bestCounts != 0  ? bestCounts : uBreakCountsFwd;
-    } else {
-      uHoldVelRev = bestAvgVel != 0.0f ? bestAvgVel : uBreakVelRev;
-      uHoldCountsRev = bestCounts != 0  ? bestCounts : uBreakCountsRev;
+  if (++uHoldIters[dir()] > SERVO_CALIBRATION_REFINE_MAX_ITERATIONS) {
+    float fallback = (lastGoodUHoldAbs[dir()] > 0.0f) ? lastGoodUHoldAbs[dir()] : uBreak[dir()];
+    uHold[dir()] = fallback;
+    if (measUHoldVel[dir()] == 0.0f) { // prefer any recorded steady sample
+      measUHoldVel[dir()] = (measUBreakVel[dir()] != 0.0f) ? measUBreakVel[dir()] : 0.0f;
+      measUHoldCnt[dir()] = (measUBreakCnt[dir()] != 0   ) ? measUBreakCnt[dir()] : 0;
     }
-    VF("WARN: "); V(axisPrefix); VF(calibrationDirectionIsForward ? " FWD" : " REV");
-    VLF(" u_hold search iteration cap reached; using last good / u_break");
+    logDirPrefix(); VLF(" WARN: u_hold search iteration cap reached; using last good / u_break");
     goto uhold_done;
   }
 
+  if (motorState != MOTOR_RUNNING_STEADY && motorState != MOTOR_STOPPED) return;
+
+  const float uBreakAbs = uBreak[dir()];
+
   if (motorState == MOTOR_RUNNING_STEADY) {
-    // Measure a window to ensure we truly hold
-    const unsigned long dt_ms = currentTime - calibrationStepStartTime;
-    if (dt_ms < SERVO_CALIBRATION_VELOCITY_MEASURE_WINDOW_MS) return;
+    auto m = measureWindow(currentTime, calibrationStepStartTime,
+                           calibrationStepStartTicks, currentTicks,
+                           SERVO_CALIBRATION_VELOCITY_MEASURE_WINDOW_MS);
+    if (!m.ready) return;
 
-    const float elapsedSec = dt_ms / 1000.0f;
-    const long  dCounts    = currentTicks - calibrationStepStartTicks;
-    const float avgVel     = (float)dCounts / elapsedSec;
+    lastGoodUHoldAbs[dir()] = fabsf(calibrationVelocity);
+    measUHoldVel[dir()]     = m.avgVel;
+    measUHoldCnt[dir()]     = m.counts;
 
-    // record as best-so-far at this lower command
-    bestAvgVel = avgVel;
-    bestCounts = dCounts;
-
-    lastGoodUHoldAbs = fabsf(calibrationVelocity);
-
-    // Step one more notch down; if we go below 0, clamp to a tiny min
-    float nextAbs = fmaxf(stairStep, lastGoodUHoldAbs - uHoldStep);
-
-    // Practical lower limit relative to u_break -> accept current
-    const float tolAbs = SERVO_CALIBRATION_STICTION_REFINE_ABS;
-    const float tolRel = SERVO_CALIBRATION_STICTION_REFINE_REL * uBreakAbs;
-    const float minAllowed = fmaxf(tolAbs, tolRel);
+    // Next notch down; practical lower limit relative to u_break -> accept current
+    float nextAbs = fmaxf(stairStep, lastGoodUHoldAbs[dir()] - uHoldStep);
+    const float minAllowed = tolFor(uBreakAbs);
     if (nextAbs <= minAllowed) {
-      float& uHoldRef = calibrationDirectionIsForward ? uHoldFwd : uHoldRev;
-      uHoldRef = lastGoodUHoldAbs;
-
-      if (calibrationDirectionIsForward) {
-        uHoldVelFwd = avgVel;
-        uHoldCountsFwd = dCounts;
-      } else {
-        uHoldVelRev = avgVel;
-        uHoldCountsRev = dCounts;
-      }
-      VF("MSG: "); V(axisPrefix);
-      VF(calibrationDirectionIsForward ? " FWD" : " REV");
-      VF(" u_hold found (below u_break): %="); V(uHoldRef); VLF("");
+      uHold[dir()] = lastGoodUHoldAbs[dir()];
+      logDirPrefix(); VF(" u_hold found (below u_break): %="); V(uHold[dir()]); VLF("");
       goto uhold_done;
     }
 
     // Kick at u_break, then queue test at nextAbs
-    queueNextTest(CALIBRATION_UHOLD_SEARCH, sign * nextAbs);
-    setVelocity(sign * uBreakAbs); // kick
-    motorState = MOTOR_ACCELERATING;
-    lastStateChangeTime = currentTime;
-    lastVelocityTime = currentTime;
-    lastVelocityMeasurement = 0;
-
-    V(axisPrefix); VF(calibrationDirectionIsForward ? " FWD" : " REV");
-    VF(" kick: u_break %="); V(uBreakAbs); VF(" -> test %="); V(nextAbs); VLF("");
+    kickAndQueue(CALIBRATION_UHOLD_SEARCH, uBreakAbs, dirSign() * nextAbs);
     return;
   }
 
   // MOTOR_STOPPED -> the last commanded value was too low; use last good as u_hold
-  {
-    float& uHoldRef = calibrationDirectionIsForward ? uHoldFwd : uHoldRev;
-    uHoldRef = (lastGoodUHoldAbs > 0.0f) ? lastGoodUHoldAbs : uBreakAbs;
-
-    // measured velocity & counts: prefer last best steady sample
-    if (calibrationDirectionIsForward) {
-      uHoldVelFwd = (bestAvgVel != 0.0f) ? bestAvgVel : uBreakVelFwd;
-      uHoldCountsFwd = (bestCounts   != 0  ) ? bestCounts   : uBreakCountsFwd;
-    } else {
-      uHoldVelRev = (bestAvgVel != 0.0f) ? bestAvgVel : uBreakVelRev;
-      uHoldCountsRev = (bestCounts   != 0  ) ? bestCounts   : uBreakCountsRev;
-    }
-
-    VF("MSG: "); V(axisPrefix);
-    VF(calibrationDirectionIsForward ? " FWD" : " REV");
-    VF(" u_hold: stall encountered; using %="); V(uHoldRef); VLF("");
+  uHold[dir()] = (lastGoodUHoldAbs[dir()] > 0.0f) ? lastGoodUHoldAbs[dir()] : uBreakAbs;
+  if (measUHoldVel[dir()] == 0.0f) { // fallback to u_break measured sample
+    measUHoldVel[dir()] = measUBreakVel[dir()];
+    measUHoldCnt[dir()] = measUBreakCnt[dir()];
   }
 
 uhold_done:
@@ -586,7 +502,6 @@ uhold_done:
     // Switch to reverse direction starting again from ceiling
     calibrationDirectionIsForward = false;
     calibrationState = CALIBRATION_CEILING;
-    // Queue the next test, since we first have to ensure stop
     queueNextTest(CALIBRATION_CEILING, -SERVO_CALIBRATION_START_VELOCITY_PERCENT);
   } else {
     calibrationState = CALIBRATION_CHECK_IMBALANCE;
@@ -599,9 +514,9 @@ void ServoCalibrateTrackingVelocity::processImbalanceCheck() {
   printReport();
 
   // Check for significant imbalance between u_hold FWD/REV
-  if (uHoldFwd > 0 && uHoldRev > 0) {
-    float avgHold = (uHoldFwd + uHoldRev) / 2.0f;
-    float imbalance = fabsf(uHoldFwd - uHoldRev) / avgHold * 100.0f;
+  if (uHold[FWD] > 0 && uHold[REV] > 0) {
+    float avgHold = (uHold[FWD] + uHold[REV]) / 2.0f;
+    float imbalance = fabsf(uHold[FWD] - uHold[REV]) / avgHold * 100.0f;
 
     if (imbalance > SERVO_CALIBRATION_IMBALANCE_ERROR_THRESHOLD) {
       VF("WARN: "); V(axisPrefix);
@@ -617,7 +532,7 @@ void ServoCalibrateTrackingVelocity::processImbalanceCheck() {
 }
 
 void ServoCalibrateTrackingVelocity::handleCalibrationFailure() {
-  VF("ERR: "); V(axisPrefix); VL("Calibration failed, resetting");
+  VF("ERR: "); V(axisPrefix); VL(" Calibration failed, resetting");
 
   // Reset to safe state
   experimentMode = false;
@@ -645,29 +560,26 @@ void ServoCalibrateTrackingVelocity::startTest(float velocity) {
   motorState = MOTOR_ACCELERATING;
   lastStateChangeTime = currentTime;
 
-  V(axisPrefix);
-  if (calibrationDirectionIsForward) {VF(" FWD");} else {VF(" REV");}
-  VF(" Start test @ %="); V(calibrationVelocity); VLF("");
+  logDirPrefix(); VF(" Start test @ %="); V(calibrationVelocity); VL("");
 }
 
 void ServoCalibrateTrackingVelocity::setVelocity(float velocityPercent) {
   // Clamp percent
-  float clamped = clampPct(velocityPercent);
-  experimentVelocity = clamped; // telemetry in percent
+  experimentVelocity = clampPct(velocityPercent); // telemetry in percent
 }
 
 // Getters ////////////////////////////////////////////////////////////////////
 float ServoCalibrateTrackingVelocity::getCeiling(bool forward) {
-  return forward ? ceilingFwd : ceilingRev;
+  return ceiling[forward ? FWD : REV];
 }
 float ServoCalibrateTrackingVelocity::getUBreak(bool forward) {
-  return forward ? uBreakFwd : uBreakRev;
+  return uBreak[forward ? FWD : REV];
 }
 float ServoCalibrateTrackingVelocity::getUHold(bool forward) {
-  return forward ? uHoldFwd : uHoldRev;
+  return uHold[forward ? FWD : REV];
 }
 
-// --- Compact report helpers
+// --- Compact report helpers (unchanged layout, new arrays) ------------------
 static inline void prDirHeader(const char* dir) {
   VF(dir); VF("  | ");
 }
@@ -684,27 +596,27 @@ void ServoCalibrateTrackingVelocity::printReport() {
 
   // FWD row
   prDirHeader("FWD");
-  prPctVelCnt(ceilingFwd, ceilingVelFwd, ceilingCountsFwd); VF("  | ");
-  prPctVelCnt(uBreakFwd,  uBreakVelFwd,  uBreakCountsFwd);  VF("  | ");
-  prPctVelCnt(uHoldFwd,   uHoldVelFwd,   uHoldCountsFwd);   VL("");
+  prPctVelCnt(ceiling[FWD], measCeilVel[FWD],  measCeilCnt[FWD]);  VF("  | ");
+  prPctVelCnt(uBreak[FWD],  measUBreakVel[FWD],measUBreakCnt[FWD]);VF("  | ");
+  prPctVelCnt(uHold[FWD],   measUHoldVel[FWD], measUHoldCnt[FWD]); VL("");
 
   // REV row
   prDirHeader("REV");
-  prPctVelCnt(ceilingRev, ceilingVelRev, ceilingCountsRev); VF("  | ");
-  prPctVelCnt(uBreakRev,  uBreakVelRev,  uBreakCountsRev);  VF("  | ");
-  prPctVelCnt(uHoldRev,   uHoldVelRev,   uHoldCountsRev);   VL("");
+  prPctVelCnt(ceiling[REV], measCeilVel[REV],  measCeilCnt[REV]);  VF("  | ");
+  prPctVelCnt(uBreak[REV],  measUBreakVel[REV],measUBreakCnt[REV]);VF("  | ");
+  prPctVelCnt(uHold[REV],   measUHoldVel[REV], measUHoldCnt[REV]); VL("");
 
   // Imbalance (use magnitudes of %)
-  float uBreakImbalance = fabsf(uBreakFwd - uBreakRev);
-  float uHoldImbalance  = fabsf(uHoldFwd - uHoldRev);
+  float uBreakImbalance = fabsf(uBreak[FWD] - uBreak[REV]);
+  float uHoldImbalance  = fabsf(uHold[FWD]  - uHold[REV]);
 
   VF("Δ u_break: "); V(uBreakImbalance); VF("%, ");
   VF("Δ u_hold: ");  V(uHoldImbalance);  VLF("%");
 
-  if (uHoldFwd >= SERVO_CALIBRATION_STOP_VELOCITY_PERCENT - 0.1f) {
+  if (uHold[FWD] >= SERVO_CALIBRATION_STOP_VELOCITY_PERCENT - 0.1f) {
     VLF("WARN: FWD u_hold at calibration limit");
   }
-  if (uHoldRev >= SERVO_CALIBRATION_STOP_VELOCITY_PERCENT - 0.1f) {
+  if (uHold[REV] >= SERVO_CALIBRATION_STOP_VELOCITY_PERCENT - 0.1f) {
     VLF("WARN: REV u_hold at calibration limit");
   }
 
@@ -712,25 +624,21 @@ void ServoCalibrateTrackingVelocity::printReport() {
 }
 
 void ServoCalibrateTrackingVelocity::resetCalibrationValues(void) {
-  ceilingFwd = SERVO_CALIBRATION_STOP_VELOCITY_PERCENT;
-  uBreakFwd  = 0.0f;
-  uHoldFwd   = 0.0f;
-  ceilingRev = SERVO_CALIBRATION_STOP_VELOCITY_PERCENT;
-  uBreakRev  = 0.0f;
-  uHoldRev   = 0.0f;
+  for (int i=0;i<2;i++) {
+    ceiling[i] = SERVO_CALIBRATION_STOP_VELOCITY_PERCENT;
+    uBreak[i]  = 0.0f;
+    uHold[i]   = 0.0f;
 
-  // Measured velocities (steps/s) & counts
-  ceilingVelFwd = uBreakVelFwd = uHoldVelFwd = 0.0f;
-  ceilingCountsFwd = uBreakCountsFwd = uHoldCountsFwd = 0;
+    measCeilVel[i] = 0.0f;  measCeilCnt[i]  = 0;
+    measUBreakVel[i]= 0.0f; measUBreakCnt[i]= 0;
+    measUHoldVel[i] = 0.0f; measUHoldCnt[i] = 0;
 
-  ceilingVelRev = uBreakVelRev = uHoldVelRev = 0.0f;
-  ceilingCountsRev = uBreakCountsRev = uHoldCountsRev = 0;
-
-  lastGoodUHoldAbs  = 0.0f;
-  lastGoodUBreakAbs = 0.0f;
-
-  bestAvgVel = 0.0f;
-  bestCounts = 0;
+    everMoved[i] = false;
+    uBreakIters[i] = 0;
+    uHoldIters[i]  = 0;
+    lastGoodUBreakAbs[i] = 0.0f;
+    lastGoodUHoldAbs[i]  = 0.0f;
+  }
 }
 
 #endif
