@@ -457,20 +457,31 @@ void ServoCalibrateTrackingVelocity::processUBreak() {
 // u_hold via staircase: kick at u_break; then step down by uHoldStep until stall.
 // Last good (steady) is taken as u_hold; also records measured avg.
 void ServoCalibrateTrackingVelocity::processUHoldSearch() {
+  const float uBreakAbs = uBreak[dir()];  // declare before any early-returns
+
+  // safety cap
   if (++uHoldIters[dir()] > SERVO_CALIBRATION_REFINE_MAX_ITERATIONS) {
-    float fallback = (lastGoodUHoldAbs[dir()] > 0.0f) ? lastGoodUHoldAbs[dir()] : uBreak[dir()];
+    float fallback = (lastGoodUHoldAbs[dir()] > 0.0f) ? lastGoodUHoldAbs[dir()] : uBreakAbs;
     uHold[dir()] = fallback;
     if (measUHoldVel[dir()] == 0.0f) { // prefer any recorded steady sample
       measUHoldVel[dir()] = (measUBreakVel[dir()] != 0.0f) ? measUBreakVel[dir()] : 0.0f;
       measUHoldCnt[dir()] = (measUBreakCnt[dir()] != 0   ) ? measUBreakCnt[dir()] : 0;
     }
-    logDirPrefix(); VLF(" WARN: u_hold search iteration cap reached; using last good / u_break");
-    goto uhold_done;
+    // common tail
+    setVelocity(0);
+    startSettling();
+    if (calibrationDirectionIsForward) {
+      calibrationDirectionIsForward = false;
+      calibrationState = CALIBRATION_CEILING;
+      queueNextTest(CALIBRATION_CEILING, -SERVO_CALIBRATION_START_VELOCITY_PERCENT);
+    } else {
+      calibrationState = CALIBRATION_CHECK_IMBALANCE;
+      processImbalanceCheck();
+    }
+    return;
   }
 
   if (motorState != MOTOR_RUNNING_STEADY && motorState != MOTOR_STOPPED) return;
-
-  const float uBreakAbs = uBreak[dir()];
 
   if (motorState == MOTOR_RUNNING_STEADY) {
     auto m = measureWindow(currentTime, calibrationStepStartTime,
@@ -487,8 +498,19 @@ void ServoCalibrateTrackingVelocity::processUHoldSearch() {
     const float minAllowed = tolFor(uBreakAbs);
     if (nextAbs <= minAllowed) {
       uHold[dir()] = lastGoodUHoldAbs[dir()];
-      logDirPrefix(); VF(" u_hold found (below u_break): %="); V(uHold[dir()]); VLF("");
-      goto uhold_done;
+
+      // common tail
+      setVelocity(0);
+      startSettling();
+      if (calibrationDirectionIsForward) {
+        calibrationDirectionIsForward = false;
+        calibrationState = CALIBRATION_CEILING;
+        queueNextTest(CALIBRATION_CEILING, -SERVO_CALIBRATION_START_VELOCITY_PERCENT);
+      } else {
+        calibrationState = CALIBRATION_CHECK_IMBALANCE;
+        processImbalanceCheck();
+      }
+      return;
     }
 
     // Kick at u_break, then queue test at nextAbs
@@ -503,11 +525,10 @@ void ServoCalibrateTrackingVelocity::processUHoldSearch() {
     measUHoldCnt[dir()] = measUBreakCnt[dir()];
   }
 
-uhold_done:
+  // common tail
   setVelocity(0);
   startSettling();
   if (calibrationDirectionIsForward) {
-    // Switch to reverse direction starting again from ceiling
     calibrationDirectionIsForward = false;
     calibrationState = CALIBRATION_CEILING;
     queueNextTest(CALIBRATION_CEILING, -SERVO_CALIBRATION_START_VELOCITY_PERCENT);
@@ -516,6 +537,7 @@ uhold_done:
     processImbalanceCheck();
   }
 }
+
 
 void ServoCalibrateTrackingVelocity::processImbalanceCheck() {
   // Print calibration report
@@ -615,11 +637,8 @@ void ServoCalibrateTrackingVelocity::printReport() {
   prPctVelCnt(uHold[REV],   measUHoldVel[REV], measUHoldCnt[REV]); VL("");
 
   // Imbalance (use magnitudes of %)
-  float uBreakImbalance = fabsf(uBreak[FWD] - uBreak[REV]);
-  float uHoldImbalance  = fabsf(uHold[FWD]  - uHold[REV]);
-
-  VF("Δ u_break: "); V(uBreakImbalance); VF("%, ");
-  VF("Δ u_hold: ");  V(uHoldImbalance);  VLF("%");
+  VF("Δ u_break: "); V(fabsf(uBreak[FWD] - uBreak[REV])); VF("%, ");
+  VF("Δ u_hold: ");  V(fabsf(uHold[FWD]  - uHold[REV]));  VLF("%");
 
   if (uHold[FWD] >= SERVO_CALIBRATION_STOP_VELOCITY_PERCENT - 0.1f) {
     VLF("WARN: FWD u_hold at calibration limit");
@@ -630,6 +649,7 @@ void ServoCalibrateTrackingVelocity::printReport() {
 
   VF("=== End Report ===\n");
 }
+
 
 void ServoCalibrateTrackingVelocity::resetCalibrationValues(void) {
   for (int i=0;i<2;i++) {
