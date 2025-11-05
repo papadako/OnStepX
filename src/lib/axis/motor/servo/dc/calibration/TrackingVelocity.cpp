@@ -3,8 +3,8 @@
 //
 // This routine performs a 3-phase, bidirectional calibration to determine:
 //   • ceiling: an upper bound % that produces sustained motion from rest
-//   • u_break: minimum % that starts moving from rest (old "floor")
-//   • u_hold : minimum % that maintains motion after a kick (old "tracking")
+//   • u_break: minimum % that starts moving from rest
+//   • u_hold : minimum % that maintains motion after a kick
 //
 // Search strategy (per direction):
 // 1) ceiling: staircase UP from a tiny % until sustained motion is detected.
