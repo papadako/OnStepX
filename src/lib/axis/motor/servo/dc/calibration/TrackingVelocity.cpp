@@ -3,13 +3,14 @@
 //
 // This routine performs a 3-phase, bidirectional calibration to determine:
 //   • ceiling: an upper bound % that produces sustained motion from rest
-//   • u_break: minimum % that starts moving from rest
-//   • u_hold : minimum % that maintains motion after a kick
+//   • u_break: minimum % that starts moving from rest (old "floor"),
+//              with a +step safety margin to guard against noise
+//   • u_hold : minimum % that maintains motion after a kick (old "tracking")
 //
 // Search strategy (per direction):
 // 1) ceiling: staircase UP from a tiny % until sustained motion is detected.
-// 2) u_break: start at ceiling and staircase DOWN in fixed steps until stall;
-//             the last steady step before stall is u_break.
+// 2) u_break: start at ceiling and staircase DOWN in fixed steps **down to 0%** until stall;
+//             the last steady step before stall (+ one uBreakStep) is u_break (capped at ceiling).
 // 3) u_hold : kick at u_break, then staircase DOWN below it; the last steady
 //             step before stall is u_hold.
 //
@@ -176,7 +177,7 @@ void ServoCalibrateTrackingVelocity::updateState(long instrumentCoordinateSteps)
   }
 }
 
-// Private helper methods //////////////////////////////////////////////////////
+// Private helper methods
 
 void ServoCalibrateTrackingVelocity::handleMotorState() {
   float currentVelocity = 0.0f;
@@ -344,12 +345,11 @@ void ServoCalibrateTrackingVelocity::transitionToUBreak() {
 
   const float ceilingAbs = ceiling[dir()];
 
-  // Sweep bounds: down from ceiling to a lower bound
+  // Sweep bounds: down from ceiling **all the way to 0%**
   calibrationMaxVelocity = ceilingAbs; // start here
-  calibrationMinVelocity = SERVO_CALIBRATION_VELOCITY_SEARCH_MIN_FACTOR * ceilingAbs; // lower bound
-  if (calibrationMinVelocity < 0.0f) calibrationMinVelocity = 0.0f;   // safety clamp
+  calibrationMinVelocity = 0.0f;       // lowest allowed is zero
 
-  // Clamp step to a sensible fraction of the span so tiny ceilings don't skip range in one hop
+  // Clamp step to a sensible fraction so tiny ceilings don't skip range in one hop
   if (ceilingAbs > 0.0f) {
     uBreakStep = fminf(uBreakStep, 0.25f * ceilingAbs);
   }
@@ -365,13 +365,15 @@ void ServoCalibrateTrackingVelocity::transitionToUBreak() {
   startTest(calibrationVelocity);
 }
 
-// u_break via staircase (DOWNWARD): start at ceiling and decrement by uBreakStep.
-// The u_break is the lowest % that still moves from rest: last steady before stall.
+// u_break via staircase (DOWNWARD): start at ceiling and decrement by uBreakStep to 0.
+// The u_break is the lowest % that still moves from rest, but we add +uBreakStep safety
+// (and cap at ceiling) to avoid sitting right on the noise edge.
 void ServoCalibrateTrackingVelocity::processUBreak() {
   if (++uBreakIters[dir()] > SERVO_CALIBRATION_REFINE_MAX_ITERATIONS) {
-    VLF("WARN: u_break sweep iteration cap reached; using last good / ceiling");
-    float decider = (lastGoodUBreakAbs[dir()] > 0.0f) ? lastGoodUBreakAbs[dir()] : calibrationMaxVelocity;
-    uBreak[dir()] = decider;
+    VLF("WARN: u_break sweep iteration cap reached; using last good / ceiling (+step safety)");
+    float lastGood = (lastGoodUBreakAbs[dir()] > 0.0f) ? lastGoodUBreakAbs[dir()] : calibrationMaxVelocity;
+    float uBreakSafe = fminf(calibrationMaxVelocity, lastGood + uBreakStep);
+    uBreak[dir()] = uBreakSafe;
 
     // measured velocity & counts (fall back to last instant if needed)
     if (measUBreakVel[dir()] == 0.0f) {
@@ -382,11 +384,11 @@ void ServoCalibrateTrackingVelocity::processUBreak() {
     // proceed to u_hold search
     calibrationState = CALIBRATION_UHOLD_SEARCH;
     uHoldIters[dir()] = 0;
-    lastGoodUHoldAbs[dir()] = decider;
+    lastGoodUHoldAbs[dir()] = uBreakSafe;
 
     // queue a first test just below u_break, kick then test
-    const float firstBelow = fmaxf(stairStep, decider - uHoldStep);
-    kickAndQueue(CALIBRATION_UHOLD_SEARCH, decider, dirSign() * firstBelow);
+    const float firstBelow = fmaxf(stairStep, uBreakSafe - uHoldStep);
+    kickAndQueue(CALIBRATION_UHOLD_SEARCH, uBreakSafe, dirSign() * firstBelow);
     return;
   }
 
@@ -406,19 +408,20 @@ void ServoCalibrateTrackingVelocity::processUBreak() {
     logDirPrefix(); VF(" u_break sweep: MOVE @ "); V(calibrationVelocity); VF("%, v≈");
     V(m.avgVel); VL(" steps/s");
 
-    // Next downward step
-    float nextAbs = fmaxf(calibrationMinVelocity, lastGoodUBreakAbs[dir()] - uBreakStep);
+    // Next downward step (to zero)
+    float nextAbs = fmaxf(0.0f, lastGoodUBreakAbs[dir()] - uBreakStep);
 
-    // If we cannot step further down, accept lastGood as u_break and enter u_hold
+    // If we cannot step further down (at 0), accept lastGood (+step safety) as u_break and enter u_hold
     if (nextAbs >= lastGoodUBreakAbs[dir()] - 1e-6f) {
-      uBreak[dir()] = lastGoodUBreakAbs[dir()];
+      float uBreakSafe = fminf(calibrationMaxVelocity, lastGoodUBreakAbs[dir()] + uBreakStep);
+      uBreak[dir()] = uBreakSafe;
 
       calibrationState = CALIBRATION_UHOLD_SEARCH;
       uHoldIters[dir()] = 0;
-      lastGoodUHoldAbs[dir()] = lastGoodUBreakAbs[dir()];
+      lastGoodUHoldAbs[dir()] = uBreakSafe;
 
-      float below = fmaxf(stairStep, lastGoodUBreakAbs[dir()] - uHoldStep);
-      kickAndQueue(CALIBRATION_UHOLD_SEARCH, uBreak[dir()], dirSign() * below);
+      float below = fmaxf(0.0f + stairStep, uBreakSafe - uHoldStep);
+      kickAndQueue(CALIBRATION_UHOLD_SEARCH, uBreakSafe, dirSign() * below);
       return;
     }
 
@@ -427,21 +430,22 @@ void ServoCalibrateTrackingVelocity::processUBreak() {
     return;
   }
 
-  // If we STOPPED, current step is too low -> u_break = last good moving step (or ceiling if none)
+  // If we STOPPED, current step is too low -> u_break = (last good + step), capped at ceiling.
   if (motorState == MOTOR_STOPPED) {
-    float uBreakAbs = (lastGoodUBreakAbs[dir()] > 0.0f) ? lastGoodUBreakAbs[dir()] : calibrationMaxVelocity;
-    uBreak[dir()] = uBreakAbs;
+    float lastGood = (lastGoodUBreakAbs[dir()] > 0.0f) ? lastGoodUBreakAbs[dir()] : calibrationMaxVelocity;
+    float uBreakSafe = fminf(calibrationMaxVelocity, lastGood + uBreakStep);
+    uBreak[dir()] = uBreakSafe;
 
     logDirPrefix(); VF(" u_break sweep: STOP @ "); V(fabsf(calibrationVelocity)); VF("% -> u_break=");
-    V(uBreakAbs); VLF("%");
+    V(uBreakSafe); VLF("% (safe)");
 
     // Enter u_hold search
     calibrationState = CALIBRATION_UHOLD_SEARCH;
     uHoldIters[dir()] = 0;
-    lastGoodUHoldAbs[dir()] = uBreakAbs;
+    lastGoodUHoldAbs[dir()] = uBreakSafe;
 
-    float below = fmaxf(stairStep, uBreakAbs - uHoldStep);
-    kickAndQueue(CALIBRATION_UHOLD_SEARCH, uBreakAbs, dirSign() * below);
+    float below = fmaxf(0.0f + stairStep, uBreakSafe - uHoldStep);
+    kickAndQueue(CALIBRATION_UHOLD_SEARCH, uBreakSafe, dirSign() * below);
     return;
   }
 }
@@ -475,7 +479,7 @@ void ServoCalibrateTrackingVelocity::processUHoldSearch() {
     measUHoldCnt[dir()]     = m.counts;
 
     // Next notch down; practical lower limit relative to u_break -> accept current
-    float nextAbs = fmaxf(stairStep, lastGoodUHoldAbs[dir()] - uHoldStep);
+    float nextAbs = fmaxf(0.0f + stairStep, lastGoodUHoldAbs[dir()] - uHoldStep);
     const float minAllowed = tolFor(uBreakAbs);
     if (nextAbs <= minAllowed) {
       uHold[dir()] = lastGoodUHoldAbs[dir()];
@@ -568,7 +572,7 @@ void ServoCalibrateTrackingVelocity::setVelocity(float velocityPercent) {
   experimentVelocity = clampPct(velocityPercent); // telemetry in percent
 }
 
-// Getters ////////////////////////////////////////////////////////////////////
+// Getters
 float ServoCalibrateTrackingVelocity::getCeiling(bool forward) {
   return ceiling[forward ? FWD : REV];
 }

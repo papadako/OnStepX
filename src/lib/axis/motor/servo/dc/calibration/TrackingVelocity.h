@@ -27,8 +27,6 @@
 #define SERVO_CALIBRATION_STICTION_REFINE_REL 0.10f           // 10% of base (ceiling/u_break)
 #define SERVO_CALIBRATION_REFINE_MAX_ITERATIONS 200           // Safeguard iteration cap
 
-// Lower bound as % of ceiling when sweeping DOWN to find u_break
-#define SERVO_CALIBRATION_VELOCITY_SEARCH_MIN_FACTOR 0.5f
 #define SERVO_CALIBRATION_VELOCITY_STABILITY_THRESHOLD 50.0f  // steps/sec^2 for steady state
 
 // --- Staircase step sizes (percent of command range) ---
@@ -46,7 +44,7 @@
 enum CalibrationState {
   CALIBRATION_IDLE,
   CALIBRATION_CEILING,       // staircase UP → ceiling (upper stiction bound)
-  CALIBRATION_UBREAK,        // staircase DOWN from ceiling → u_break (old floor)
+  CALIBRATION_UBREAK,        // staircase DOWN from ceiling to 0 → u_break (old floor)
   CALIBRATION_UHOLD_SEARCH,  // staircase DOWN below u_break (after kick) → u_hold (old tracking)
   CALIBRATION_CHECK_IMBALANCE
 };
@@ -60,7 +58,7 @@ public:
 
   // Results (percent commands)
   float getCeiling(bool forward); // unchanged name
-  float getUBreak(bool forward);  // old floor: min % that starts motion from rest
+  float getUBreak(bool forward);  // old floor: min % that starts motion from rest (with +step safety)
   float getUHold(bool forward);   // old tracking: min % that maintains motion after a kick
 
   bool experimentMode;
@@ -111,7 +109,7 @@ private:
   // Core methods
   void handleMotorState();
   void processCeiling();       // staircase UP → ceiling
-  void processUBreak();        // staircase DOWN from ceiling → u_break
+  void processUBreak();        // staircase DOWN from ceiling to 0 → u_break (+ step safety)
   void processUHoldSearch();   // staircase DOWN from u_break (after kick) → u_hold
   void processImbalanceCheck();
   void handleCalibrationFailure();
@@ -152,12 +150,12 @@ private:
 
   // Calibration parameters (shared across phases)
   float calibrationVelocity;          // signed (%)
-  float calibrationMinVelocity;       // abs % (lower bound for u_break sweep)
+  float calibrationMinVelocity;       // abs % (lower bound for u_break sweep) -> 0%
   float calibrationMaxVelocity;       // abs % (ceiling)
 
   // Results (magnitudes, %)
   float ceiling[2];   // upper bound % that produced sustained motion from rest
-  float uBreak[2];    // min % that starts motion from rest (old floor)
+  float uBreak[2];    // min % that starts motion from rest (old floor) - with +step safety
   float uHold[2];     // min % that maintains motion after a kick (old tracking)
 
   // Measured velocities (steps/s) & counts captured for report
