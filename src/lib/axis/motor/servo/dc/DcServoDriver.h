@@ -15,6 +15,10 @@
   #define SERVO_ANALOG_WRITE_RANGE ANALOG_WRITE_RANGE
 #endif
 
+#ifdef SERVO_SIGMA_DELTA_DITHERING
+  #include "SigmaDeltaDither.h"
+#endif
+
 // Enable to apply hysteresis around zero velocity
 #ifdef SERVO_HYSTERESIS_ENABLE
   // Thresholds in encoder counts/sec
@@ -24,9 +28,9 @@
   #ifndef SERVO_HYST_EXIT_CPS
     #define SERVO_HYST_EXIT_CPS 10.0f    // drop below this to RETURN to zero (half of the above)
   #endif
-
-  #ifdef SERVO_SIGMA_DELTA_DITHERING
-    #include "SigmaDeltaDither.h"
+  // Reset hysteresis on direction changes while "moving" (forces pass-through zero)
+  #ifndef SERVO_HYST_RESET_ON_DIR_FLIP
+    #define SERVO_HYST_RESET_ON_DIR_FLIP 1
   #endif
 #endif
 
@@ -53,6 +57,11 @@
 #ifndef SERVO_NONLINEAR_KNEE_CPS
   #define SERVO_NONLINEAR_KNEE_CPS 25.0f // tune
 #endif
+// Relative knee: if >0, knee = velocityMax * percent; otherwise use absolute CPS
+#ifndef SERVO_NONLINEAR_KNEE_PERCENT
+  #define SERVO_NONLINEAR_KNEE_PERCENT 0.1f   // e.g., 0.10f for 10% of vmax; 0 => use absolute CPS
+#endif
+
 
 #include "../ServoDriver.h"
 
@@ -90,119 +99,45 @@ class ServoDcDriver : public ServoDriver {
       recomputeScalingIfNeeded();
 
       // Extract sign and work with magnitude
-      int sign = 1;
-      if (velocity < 0.0F) { velocity = -velocity; sign = -1; }
+      int sign = (velocity < 0.0f) ? -1 : +1;
+      float vAbs = (velocity < 0.0f) ? -velocity : velocity;
 
-      if (velocity == 0.0F || velocityMaxCached <= 0.0f) {
-
-        #ifdef SERVO_HYSTERESIS_ENABLE
-          zeroHoldSign = 0; // ensure immediate exit and clear latch on exact zero
-        #endif
-
-        #ifdef SERVO_SIGMA_DELTA_DITHERING
-          sigmaDelta.reset(); // reset dithering residue when output is zero
-        #endif
-
-        // remember we are outputting zero
-        #ifdef SERVO_STICTION_KICK
-          lastPowerCounts = 0;
-          lastSign = 0;
-          kickUntilMs = 0;
-        #endif
-        return 0; // early out
+      if (vAbs == 0.0f || velocityMaxCached <= 0.0f) {
+        return handleZeroVelocity(); // early out (also resets state)
       }
 
       // Clamp to velocityMax to avoid over-range math.
-      float vAbs = velocity; // already absolute
       if (vAbs > velocityMaxCached) vAbs = velocityMaxCached;
 
       #ifdef SERVO_HYSTERESIS_ENABLE
-        // Hysteresis around zero: require a larger enter threshold to leave zero,
-        // and a smaller "exit" threshold to return to zero. This prevents chatter
-        // when the PID jitters around zero
-        if (zeroHoldSign == 0) {
-          // currently at zero: must exceed enter threshold to start moving
-          if (vAbs < SERVO_HYST_ENTER_CPS) return 0;
-          zeroHoldSign = (sign >= 0) ? 1 : -1; // latch direction
-        } else {
-          // currently moving: if we drop below exit threshold, snap back to zero
-          if (vAbs < SERVO_HYST_EXIT_CPS) {
-            zeroHoldSign = 0;
-            #ifdef SERVO_SIGMA_DELTA_DITHERING
-              sigmaDelta.reset(); // also reset when snapping back to zero
-            #endif
-            return 0;
-          }
-          // allow direction change if command flips while above thresholds
-          if ((sign >= 0 ? 1 : -1) != zeroHoldSign) zeroHoldSign = (sign >= 0) ? 1 : -1;
+        // Hysteresis around zero: may hold at zero or latch direction
+        int hSign = applyHysteresis(vAbs, sign);
+        if (hSign == 0) {
+          // held/snapped to zero
+          #ifdef SERVO_SIGMA_DELTA_DITHERING
+            sigmaDelta.reset(); // also reset when snapping back to zero
+          #endif
+          return 0;
         }
-        // use latched direction while moving
-        sign = (zeroHoldSign < 0) ? -1 : 1;
+        sign = hSign; // use latched sign while moving
       #endif
 
-      float countsF;
-      const float v_knee = SERVO_NONLINEAR_KNEE_CPS;
-      const float gamma  = SERVO_NONLINEAR_GAMMA;
+      // Nonlinear near-zero mapping (concave) or linear above knee
+      float countsF = applyNonLinearMapping(vAbs);
 
-      // TODO! Another option is to make the calibration code create a map based on current load and type of mount
-      // I expect differences in the mapping for friction mounts vs other mounts with no stiction
-      if (SERVO_NONLINEAR_ENABLE && gamma > 0.0f && gamma < 1.0f && vAbs > 0.0f && vAbs < v_knee) {
-        // Concave: more PWM than linear for tiny velocities
-        // countsF = velToCountsGain * v * (v / v_knee)^(gamma - 1)
-        float t = vAbs / v_knee;                 // 0..1
-        float scale = powf(fmaxf(t, 1e-6f), gamma - 1.0f);
-        countsF = velToCountsGain * vAbs * scale;
-      } else {
-        // Linear above knee (or if disabled)
-        countsF = vAbs * velToCountsGain; // target in [0 .. countsMaxCached]
-      }
-
-      // Linear map WITHOUT offset
-
+      // Quantize to integer counts
       #ifdef SERVO_SIGMA_DELTA_DITHERING
         // Dither the floating counts to an integer so the time-average equals countsF.
         // Use 0..countsMaxCached as the dither bounds (not countsMinCached),
-        // then apply the minimum kick below.
-        int32_t power = sigmaDelta.ditherCounts(countsF, 0, countsMaxCached);
+        // then apply the minimum/kick below.
+        long power = (long) sigmaDelta.ditherCounts(countsF, 0, countsMaxCached);
       #else
-        // Single float→int rounding at the end
-        long power = (long)lroundf(countsF);
+        long power = (long) lroundf(countsF);
       #endif
 
       #ifdef SERVO_STICTION_KICK
         const uint32_t now = millis();
-        const int reqSign = (sign >= 0) ? +1 : -1;
-
-        if (kickAllowedByMode) {
-          // Start a stiction kick ?
-          // We kick when we are at rest (lastPowerCounts == 0) and receive a nonzero request,
-          // or when we flip direction.
-          bool leaveZero   = (lastPowerCounts == 0) && (power > 0);
-          bool dirFlip     = (lastSign != 0 && reqSign != lastSign);
-
-          if (leaveZero || dirFlip) {
-            kickUntilMs = now + SERVO_STICTION_KICK_MS;
-          }
-
-          // If we are within the kick window, enforce the breakaway minimum
-          if (kickUntilMs != 0 && (int32_t)(now - kickUntilMs) < 0) {
-            if (power > 0 && power < countsBreakCached) power = countsBreakCached;
-          } else {
-            kickUntilMs = 0; // window expired
-            if (power > 0 && power < countsMinCached) power = countsMinCached;
-          }
-        } else {
-          // Not in tracking mode: no kick, just sustaining minimum
-          kickUntilMs = 0;
-          if (power > 0 && power < countsMinCached) power = countsMinCached;
-        }
-
-        // Final clamp and sign/update
-        if (power > countsMaxCached) power = countsMaxCached;
-        power *= reqSign;
-        lastPowerCounts = power;
-        lastSign        = (power > 0) ? +1 : (power < 0 ? -1 : 0);
-        return power;
+        return applyStictionKick(power, sign, now);
       #else
         // No kick feature: just apply sustaining minimum and clamp
         if (power > 0 && power < countsMinCached) power = countsMinCached;
@@ -223,6 +158,19 @@ class ServoDcDriver : public ServoDriver {
 
     const int numParameters = 3;
     AxisParameter* parameter[4] = {&invalid, &acceleration, &pwmMinimum, &pwmMaximum};
+
+    // --- helper API (split from toAnalogRange) -------------------------------------
+    // Reset state when commanded velocity is zero; returns 0
+    long handleZeroVelocity();
+
+    // Hysteresis logic around zero; returns 0 to hold at zero or ±1 for latched sign
+    int  applyHysteresis(float vAbs, int sign);
+
+    // Nonlinear concave mapping near zero; returns float "counts" before quantization
+    float applyNonLinearMapping(float vAbs);
+
+    // Stiction kick/minimum enforcement/clamp/sign; returns final signed integer counts
+    long applyStictionKick(long power, int sign, uint32_t now);
 
   private:
     // Cached scaling (recomputed only when inputs change)
@@ -287,8 +235,142 @@ class ServoDcDriver : public ServoDriver {
       int8_t   lastSign        = 0;   // -1, 0, +1 of lastPowerCounts
       uint32_t kickUntilMs     = 0;   // time until which we keep kicking
       int32_t  countsBreakCached = 0; // breakaway minimum in counts (recomputed with scaling)
-      bool kickAllowedByMode = false;  // set via setTrackingMode()
+      bool kickAllowedByMode = false; // set via setTrackingMode()
+    #endif
+
+    #ifdef SERVO_SIGMA_DELTA_DITHERING
+      SigmaDeltaDither sigmaDelta;
     #endif
 };
 
-#endif
+// ========================= Helper Implementations ================================
+
+inline long ServoDcDriver::handleZeroVelocity() {
+  #ifdef SERVO_HYSTERESIS_ENABLE
+    zeroHoldSign = 0; // ensure immediate exit and clear latch on exact zero
+  #endif
+
+  #ifdef SERVO_SIGMA_DELTA_DITHERING
+    sigmaDelta.reset(); // reset dithering residue when output is zero
+  #endif
+
+  #ifdef SERVO_STICTION_KICK
+    // remember we are outputting zero
+    lastPowerCounts = 0;
+    lastSign = 0;
+    kickUntilMs = 0;
+  #endif
+
+  return 0;
+}
+
+inline int ServoDcDriver::applyHysteresis(float vAbs, int sign) {
+  #ifndef SERVO_HYSTERESIS_ENABLE
+    (void)vAbs; (void)sign;
+    return (sign >= 0) ? +1 : -1;
+  #else
+    const int reqSign = (sign >= 0) ? +1 : -1;
+
+    if (zeroHoldSign == 0) {
+      // currently at zero: must exceed enter threshold to start moving
+      if (vAbs < SERVO_HYST_ENTER_CPS) return 0;
+      zeroHoldSign = reqSign; // latch direction
+      return zeroHoldSign;
+    }
+
+    // currently moving
+    #if SERVO_HYST_RESET_ON_DIR_FLIP
+      // Alternative: maybe we want to reset hysteresis on direction changes?
+      if (reqSign != zeroHoldSign) {
+        // Direction changed - reset hysteresis?
+        zeroHoldSign = 0;
+        return 0;
+      }
+    #else
+      // allow direction change if command flips while above thresholds
+      if (reqSign != zeroHoldSign) zeroHoldSign = reqSign;
+    #endif
+
+    // if we drop below exit threshold, snap back to zero
+    if (vAbs < SERVO_HYST_EXIT_CPS) {
+      zeroHoldSign = 0;
+      return 0;
+    }
+
+    // use latched direction while moving
+    return (zeroHoldSign < 0) ? -1 : +1;
+  #endif
+}
+
+inline float ServoDcDriver::applyNonLinearMapping(float vAbs) {
+  // Decide knee: relative (percent of Vmax) vs absolute CPS
+  float v_knee =
+    (SERVO_NONLINEAR_KNEE_PERCENT > 0.0f && velocityMaxCached > 0.0f)
+      ? (velocityMaxCached * SERVO_NONLINEAR_KNEE_PERCENT)
+      : SERVO_NONLINEAR_KNEE_CPS;
+
+  const float gamma  = SERVO_NONLINEAR_GAMMA;
+
+  // TODO! Another option is to make the calibration code create a map based on current load and type of mount
+  // I expect differences in the mapping for friction mounts vs other mounts with no stiction
+  if (SERVO_NONLINEAR_ENABLE && gamma > 0.0f && gamma < 1.0f && vAbs > 0.0f && vAbs < v_knee) {
+    // Concave: more PWM than linear for tiny velocities
+    // countsF = velToCountsGain * v * (v / v_knee)^(gamma - 1)
+    float t = vAbs / fmaxf(v_knee, 1e-6f);     // normalize 0..1
+    float scale = powf(fmaxf(t, 1e-6f), gamma - 1.0f);
+    return velToCountsGain * vAbs * scale;
+  } else {
+    // Linear above knee (or if disabled)
+    return vAbs * velToCountsGain; // target in [0 .. countsMaxCached]
+  }
+}
+
+inline long ServoDcDriver::applyStictionKick(long power, int sign, uint32_t now) {
+  #ifndef SERVO_STICTION_KICK
+    (void)sign; (void)now;
+    // Sustain min, clamp, sign
+    if (power > 0 && power < countsMinCached) power = countsMinCached;
+    if (power > countsMaxCached) power = countsMaxCached;
+    power *= (sign >= 0) ? +1 : -1;
+    return power;
+  #else
+    const int reqSign = (sign >= 0) ? +1 : -1;
+
+    if (kickAllowedByMode) {
+      // Start a stiction kick ?
+      // We kick when we are at rest (lastPowerCounts == 0) and receive a nonzero request,
+      // or when we flip direction.
+      bool leaveZero   = (lastPowerCounts == 0) && (power > 0);
+      bool dirFlip     = (lastSign != 0 && reqSign != lastSign);
+
+      if (leaveZero || dirFlip) {
+        kickUntilMs = now + SERVO_STICTION_KICK_MS;
+        #ifdef SERVO_SIGMA_DELTA_DITHERING
+          // reset dithering residue on flips to avoid bias
+          if (dirFlip) sigmaDelta.reset();
+        #endif
+      }
+
+      // If we are within the kick window, enforce the breakaway minimum
+      if (kickUntilMs != 0 && (int32_t)(now - kickUntilMs) < 0) {
+        if (power > 0 && power < countsBreakCached) power = countsBreakCached;
+      } else {
+        kickUntilMs = 0; // window expired
+        if (power > 0 && power < countsMinCached) power = countsMinCached;
+      }
+    } else {
+      // Not in tracking mode: no kick, just sustaining minimum
+      kickUntilMs = 0;
+      if (power > 0 && power < countsMinCached) power = countsMinCached;
+    }
+
+    // Final clamp and sign/update
+    if (power > countsMaxCached) power = countsMaxCached;
+    power *= reqSign;
+    lastPowerCounts = power;
+    lastSign        = (power > 0) ? +1 : (power < 0 ? -1 : 0);
+    return power;
+  #endif
+}
+
+#endif // driver present
