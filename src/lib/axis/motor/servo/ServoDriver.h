@@ -79,6 +79,9 @@ class ServoDriver {
     // this is a required method for the Axis class
     DriverStatus getStatus() { return status; }
 
+    // do not use acceleration while trackings
+    void setBypassAccelOnTracking(bool on) { bypassAccelOnTracking = on; }
+
     // calibrate the motor if required
     virtual void calibrateDriver() {}
 
@@ -112,6 +115,7 @@ class ServoDriver {
     uint8_t enabledState = LOW;
     bool enabled = false;
     int16_t faultPin = OFF;
+    bool bypassAccelOnTracking = false;
 
     const ServoPins *Pins;
     const ServoSettings *Settings;
