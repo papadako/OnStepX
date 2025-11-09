@@ -14,6 +14,10 @@
   #include "dc/SigmaDeltaDither.h"
 #endif
 
+#ifndef SERVO_BYPASS_ACCEL_WHILE_TRACKING
+  #define SERVO_BYPASS_ACCEL_WHILE_TRACKING 1
+#endif
+
 typedef struct ServoPins {
   int16_t ph1; // step
   int16_t ph1State;
@@ -115,7 +119,8 @@ class ServoDriver {
     uint8_t enabledState = LOW;
     bool enabled = false;
     int16_t faultPin = OFF;
-    bool bypassAccelOnTracking = false;
+    bool bypassAccelOnTracking = SERVO_BYPASS_ACCEL_WHILE_TRACKING;
+    bool trackingMode = false;
 
     const ServoPins *Pins;
     const ServoSettings *Settings;

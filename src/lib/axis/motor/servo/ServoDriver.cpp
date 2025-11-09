@@ -90,7 +90,7 @@ float ServoDriver::setMotorVelocity(float velocity) {
   if (velocity > velocityMax) velocity = velocityMax; else
   if (velocity < -velocityMax) velocity = -velocityMax;
 
-  if(bypassAccelOnTracking)
+  if(bypassAccelOnTracking && trackingMode)
     velocityRamp = velocity;
   else {
     // ramp velocity
