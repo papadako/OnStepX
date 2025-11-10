@@ -34,6 +34,12 @@
   #define AXIS1_SERVO_VELOCITY_CALIBRATION 1
 #endif
 
+// Disable accel ramp when command speed is "slow"
+#ifndef SERVO_BYPASS_ACCEL_MAX_RATE_MULT
+  #define SERVO_BYPASS_ACCEL_MAX_RATE_MULT 3.0f   // up to 3× sidereal => no ramp
+#endif
+
+
 class ServoMotor : public Motor {
   public:
     // constructor
@@ -55,7 +61,7 @@ class ServoMotor : public Motor {
 
     // check if parameter is valid
     bool parameterIsValid(AxisParameter* parameter, bool next = false) { if (!Motor::parameterIsValid(parameter, next)) return false; else return driver->parameterIsValid(parameter, next); }
-    
+
     // sets reversal of axis directions
     // \param state: true reverses the direction behavior specified in settings
     void setReverse(int8_t state);
@@ -66,7 +72,7 @@ class ServoMotor : public Motor {
     // get the associated motor driver status
     DriverStatus getDriverStatus();
 
-    // resets motor and target angular position in steps, also zeros backlash and index 
+    // resets motor and target angular position in steps, also zeros backlash and index
     void resetPositionSteps(long value);
 
     // get instrument coordinate, in steps
@@ -121,7 +127,7 @@ class ServoMotor : public Motor {
 
     // sets dir as required and moves coord toward target at setFrequencySteps() rate
     void move();
-    
+
     // servo motor driver
     ServoDriver *driver;
 

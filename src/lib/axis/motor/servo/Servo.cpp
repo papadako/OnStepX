@@ -300,7 +300,13 @@ void ServoMotor::poll() {
 
   long unfilteredEncoderCounts = encoderCounts;
   UNUSED(unfilteredEncoderCounts);
-  bool isTracking = (abs(currentFrequency - trackingFrequency) < trackingFrequency/10.0F);
+  // “Slow mode” when commanded speed is at/below threshold and not slewing
+  const bool slowMode = (fabsf(currentFrequency); <= SERVO_BYPASS_ACCEL_MAX_RATE_MULT * trackingFrequency);
+  const bool bypass   = (!slewing) && slowMode;
+
+  // Old behavior for isTracking
+  //bool isTracking = (abs(currentFrequency - trackingFrequency) < trackingFrequency/10.0F);
+  bool isTracking = bypass;
   driver->setTrackingMode(isTracking);
 
   encoderCounts = filter->update(encoderCounts, motorCounts, isTracking);
