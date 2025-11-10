@@ -107,28 +107,6 @@ Telescope West
 18:08:13.040 -> Cross-axis avg u_hold delta: 4.70%
 18:08:13.040 -> ==================================
 
-(2nd run)
-
- === Calibration Report: Axis1 ServoCalibrate ===
-17:38:15.908 -> Dir  | u_break                         | u_hold
-17:38:15.908 -> -----+---------------------------------+---------------------------------
-17:38:15.908 -> FWD  | pct 3.20%, v 14.93 steps/s, cnt 3  | pct 3.20%, v 0.00 steps/s, cnt 0
-17:38:15.908 -> REV  | pct 2.50%, v -20.00 steps/s, cnt -4  | pct 2.50%, v -6.00 steps/s, cnt -3
-17:38:15.908 -> Δ u_break: 0.70%, Δ u_hold: 0.70%
-17:38:15.908 -> u_hold imbalance vs avg: 24.56%
-17:38:15.908 -> WARN: Axis1 ServoCalibrate Imbalance: 24.56%
-17:38:15.908 -> === End Report ===
-17:38:15.908 -> 
-17:38:15.908 -> === Calibration Report: Axis2 ServoCalibrate ===
-17:38:15.908 -> Dir  | u_break                         | u_hold
-17:38:15.908 -> -----+---------------------------------+---------------------------------
-17:38:15.908 -> FWD  | pct 6.10%, v 20.00 steps/s, cnt 4  | pct 6.10%, v 0.00 steps/s, cnt 0
-17:38:15.908 -> REV  | pct 2.50%, v -19.90 steps/s, cnt -4  | pct 2.50%, v 0.00 steps/s, cnt 0
-17:38:15.908 -> Δ u_break: 3.60%, Δ u_hold: 3.60%
-17:38:15.908 -> u_hold imbalance vs avg: 83.72%
-17:38:15.908 -> WARN: Axis2 ServoCalibrate Imbalance: 83.72%
-17:38:15.908 -> === End Report ===
-
 Telescope Ease
 
 (1st run)
