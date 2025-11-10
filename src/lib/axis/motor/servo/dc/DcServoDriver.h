@@ -23,10 +23,10 @@
 #ifdef SERVO_HYSTERESIS_ENABLE
   // Thresholds in encoder counts/sec
   #ifndef SERVO_HYST_ENTER_CPS
-    #define SERVO_HYST_ENTER_CPS 20.0f   // must exceed this to LEAVE zero (e.g., ~1/5 of sidereal speed of 92 counts / sec)
+    #define SERVO_HYST_ENTER_CPS 3.0f   // must exceed this to LEAVE zero
   #endif
   #ifndef SERVO_HYST_EXIT_CPS
-    #define SERVO_HYST_EXIT_CPS 10.0f    // drop below this to RETURN to zero (half of the above)
+    #define SERVO_HYST_EXIT_CPS 1.0f    // drop below this to RETURN to zero
   #endif
   // Reset hysteresis on direction changes while "moving" (forces pass-through zero)
   #ifndef SERVO_HYST_RESET_ON_DIR_FLIP
