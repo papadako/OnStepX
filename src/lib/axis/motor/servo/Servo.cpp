@@ -88,6 +88,14 @@ bool ServoMotor::init() {
 
   trackingFrequency = (AXIS1_STEPS_PER_DEGREE/240.0F)*SIDEREAL_RATIO_F;
 
+  // --- Acceleration-ramp bypass info ---
+  const float bypassThreshold = SERVO_BYPASS_ACCEL_MAX_RATE_MULT * trackingFrequency;
+  VF("MSG:"); V(axisPrefix);
+  VF("Accel ramp: BYPASS when not slewing and |cmd| <= ");
+  V((float)bypassThreshold); VF(" steps/s ");
+  VF("(mult="); V((float)SERVO_BYPASS_ACCEL_MAX_RATE_MULT);
+  VF(", tracking="); V((float)trackingFrequency); VLF(" steps/s)");
+
   // start the motion timer
   VF("MSG:"); V(axisPrefix); VF("start task to synthesize motion... ");
   char timerName[] = "Ax_Svo";
