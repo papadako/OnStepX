@@ -107,35 +107,10 @@ Telescope West
 18:08:13.040 -> Cross-axis avg u_hold delta: 4.70%
 18:08:13.040 -> ==================================
 
-Telescope Ease
+
+Telescope East
 
 (1st run)
-
-17:59:31.286 -> ===== Joint Servo Calibration =====
-17:59:31.286 -> 
-17:59:31.286 -> === Calibration Report: Axis1 ServoCalibrate ===
-17:59:31.286 -> Dir  | u_break                         | u_hold
-17:59:31.286 -> -----+---------------------------------+---------------------------------
-17:59:31.286 -> FWD  | pct 3.20%, v 14.93 steps/s, cnt 3  | pct 3.10%, v 3.98 steps/s, cnt 2
-17:59:31.286 -> REV  | pct 2.50%, v -24.88 steps/s, cnt -5  | pct 2.50%, v 0.00 steps/s, cnt 0
-17:59:31.286 -> Δ u_break: 0.70%, Δ u_hold: 0.60%
-17:59:31.286 -> u_hold imbalance vs avg: 21.43%
-17:59:31.286 -> WARN: Axis1 ServoCalibrate Imbalance: 21.43%
-17:59:31.286 -> === End Report ===
-17:59:31.286 -> 
-17:59:31.286 -> === Calibration Report: Axis2 ServoCalibrate ===
-17:59:31.286 -> Dir  | u_break                         | u_hold
-17:59:31.286 -> -----+---------------------------------+---------------------------------
-17:59:31.286 -> FWD  | pct 5.20%, v 25.00 steps/s, cnt 5  | pct 5.10%, v 4.00 steps/s, cnt 2
-17:59:31.286 -> REV  | pct 3.10%, v -39.80 steps/s, cnt -8  | pct 3.10%, v 0.00 steps/s, cnt 0
-17:59:31.286 -> Δ u_break: 2.10%, Δ u_hold: 2.00%
-17:59:31.286 -> u_hold imbalance vs avg: 48.78%
-17:59:31.286 -> WARN: Axis2 ServoCalibrate Imbalance: 48.78%
-17:59:31.286 -> === End Report ===
-17:59:31.286 -> Cross-axis avg u_hold delta: 1.30%
-17:59:31.286 -> ==================================
-
-(2nd run)
 
 17:57:50.779 -> ===== Joint Servo Calibration =====
 17:57:50.779 -> 
@@ -160,3 +135,29 @@ Telescope Ease
 17:57:50.779 -> === End Report ===
 17:57:50.779 -> Cross-axis avg u_hold delta: 1.30%
 17:57:50.779 -> ==================================
+
+(2nd run)
+
+17:59:31.286 -> ===== Joint Servo Calibration =====
+17:59:31.286 -> 
+17:59:31.286 -> === Calibration Report: Axis1 ServoCalibrate ===
+17:59:31.286 -> Dir  | u_break                         | u_hold
+17:59:31.286 -> -----+---------------------------------+---------------------------------
+17:59:31.286 -> FWD  | pct 3.20%, v 14.93 steps/s, cnt 3  | pct 3.10%, v 3.98 steps/s, cnt 2
+17:59:31.286 -> REV  | pct 2.50%, v -24.88 steps/s, cnt -5  | pct 2.50%, v 0.00 steps/s, cnt 0
+17:59:31.286 -> Δ u_break: 0.70%, Δ u_hold: 0.60%
+17:59:31.286 -> u_hold imbalance vs avg: 21.43%
+17:59:31.286 -> WARN: Axis1 ServoCalibrate Imbalance: 21.43%
+17:59:31.286 -> === End Report ===
+17:59:31.286 -> 
+17:59:31.286 -> === Calibration Report: Axis2 ServoCalibrate ===
+17:59:31.286 -> Dir  | u_break                         | u_hold
+17:59:31.286 -> -----+---------------------------------+---------------------------------
+17:59:31.286 -> FWD  | pct 5.20%, v 25.00 steps/s, cnt 5  | pct 5.10%, v 4.00 steps/s, cnt 2
+17:59:31.286 -> REV  | pct 3.10%, v -39.80 steps/s, cnt -8  | pct 3.10%, v 0.00 steps/s, cnt 0
+17:59:31.286 -> Δ u_break: 2.10%, Δ u_hold: 2.00%
+17:59:31.286 -> u_hold imbalance vs avg: 48.78%
+17:59:31.286 -> WARN: Axis2 ServoCalibrate Imbalance: 48.78%
+17:59:31.286 -> === End Report ===
+17:59:31.286 -> Cross-axis avg u_hold delta: 1.30%
+17:59:31.286 -> ==================================
