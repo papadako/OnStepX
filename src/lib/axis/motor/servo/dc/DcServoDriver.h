@@ -48,20 +48,18 @@
 #endif
 
 // Nonlinear concave mapping near zero (further help kick)
-#ifndef SERVO_NONLINEAR_ENABLE
-  #define SERVO_NONLINEAR_ENABLE 0
+#ifdef SERVO_NONLINEAR_ENABLE
+  #ifndef SERVO_NONLINEAR_GAMMA
+    #define SERVO_NONLINEAR_GAMMA 0.65f    // concave (0.5–0.8 is a good range)
+  #endif
+  #ifndef SERVO_NONLINEAR_KNEE_CPS
+    #define SERVO_NONLINEAR_KNEE_CPS 25.0f // tune
+  #endif
+  // Relative knee: if >0, knee = velocityMax * percent; otherwise use absolute CPS
+  #ifndef SERVO_NONLINEAR_KNEE_PERCENT
+    #define SERVO_NONLINEAR_KNEE_PERCENT 0.1f   // e.g., 0.10f for 10% of vmax; 0 => use absolute CPS
+  #endif
 #endif
-#ifndef SERVO_NONLINEAR_GAMMA
-  #define SERVO_NONLINEAR_GAMMA 0.65f    // concave (0.5–0.8 is a good range)
-#endif
-#ifndef SERVO_NONLINEAR_KNEE_CPS
-  #define SERVO_NONLINEAR_KNEE_CPS 25.0f // tune
-#endif
-// Relative knee: if >0, knee = velocityMax * percent; otherwise use absolute CPS
-#ifndef SERVO_NONLINEAR_KNEE_PERCENT
-  #define SERVO_NONLINEAR_KNEE_PERCENT 0.1f   // e.g., 0.10f for 10% of vmax; 0 => use absolute CPS
-#endif
-
 
 #include "../ServoDriver.h"
 
@@ -303,29 +301,42 @@ inline int ServoDcDriver::applyHysteresis(float vAbs, int sign) {
 }
 
 inline float ServoDcDriver::applyNonLinearMapping(float vAbs) {
-  // Decide knee: relative (percent of Vmax) vs absolute CPS
-  float v_knee =
-    (SERVO_NONLINEAR_KNEE_PERCENT > 0.0f && velocityMaxCached > 0.0f)
-      ? (velocityMaxCached * SERVO_NONLINEAR_KNEE_PERCENT)
-      : SERVO_NONLINEAR_KNEE_CPS;
+  if (vAbs <= 0.0f) return 0.0f;
 
-  const float gamma  = SERVO_NONLINEAR_GAMMA;
+  // Default linear result
+  const float linear = vAbs * velToCountsGain;
 
-  // TODO! Another option is to make the calibration code create a map based on current load and type of mount
-  // I expect differences in the mapping for friction mounts vs other mounts with no stiction
-  if (SERVO_NONLINEAR_ENABLE && gamma > 0.0f && gamma < 1.0f && vAbs > 0.0f && vAbs < v_knee) {
-    // Concave: more PWM than linear for tiny velocities
-    // countsF = velToCountsGain * v * (v / v_knee)^(gamma - 1)
-    float t = vAbs / fmaxf(v_knee, 1e-6f);     // normalize 0..1
-    float scale = powf(fmaxf(t, 1e-6f), gamma - 1.0f);
-    return velToCountsGain * vAbs * scale;
-  } else {
-    // Linear above knee (or if disabled)
-    return vAbs * velToCountsGain; // target in [0 .. countsMaxCached]
-  }
+  // --- Nonlinear near-zero mapping (compiled out if disabled) ---
+  #ifdef SERVO_NONLINEAR_ENABLE
+    const float gamma = SERVO_NONLINEAR_GAMMA;
+    if (gamma > 0.0f && gamma < 1.0f) {
+      // Compute knee ONLY if we might use it
+      float v_knee =
+        (SERVO_NONLINEAR_KNEE_PERCENT > 0.0f && velocityMaxCached > 0.0f)
+          ? (velocityMaxCached * SERVO_NONLINEAR_KNEE_PERCENT)
+          : SERVO_NONLINEAR_KNEE_CPS;
+
+      if (v_knee > 1e-6f && vAbs < v_knee) {
+        // t in (0,1); avoid denormals/zero
+        float invKnee = 1.0f / v_knee;
+        float t = vAbs * invKnee;
+        if (t < 1e-6f) t = 1e-6f;
+
+        // scale = t^(gamma-1)
+        const float gm1 = gamma - 1.0f;
+        float scale = expf(gm1 * logf(t));   // or powf(t, gm1)
+
+        return velToCountsGain * vAbs * scale;
+      }
+    }
+  #endif
+
+  // Linear when nonlinear is disabled, gamma invalid, above knee, or knee invalid
+  return linear;
 }
 
 inline long ServoDcDriver::applyStictionKick(long power, int sign, uint32_t now) {
+  // No kicking
   #ifndef SERVO_STICTION_KICK
     (void)sign; (void)now;
     // Sustain min, clamp, sign
@@ -334,6 +345,7 @@ inline long ServoDcDriver::applyStictionKick(long power, int sign, uint32_t now)
     power *= (sign >= 0) ? +1 : -1;
     return power;
   #else
+    // We are kicking
     const int reqSign = (sign >= 0) ? +1 : -1;
 
     if (kickAllowedByMode) {
