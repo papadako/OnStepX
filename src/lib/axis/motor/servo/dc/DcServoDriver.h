@@ -80,10 +80,9 @@ class ServoDcDriver : public ServoDriver {
     float setMotorVelocity(float velocity);
 
     void setTrackingMode(bool state) {
+      ServoDriver::setTrackingMode(state);   // update base trackingMode
       #ifdef SERVO_STICTION_KICK
         kickAllowedByMode = state;
-      #else
-        (void) state;
       #endif
     }
 

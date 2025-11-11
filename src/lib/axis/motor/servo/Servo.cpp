@@ -89,12 +89,17 @@ bool ServoMotor::init() {
   trackingFrequency = (AXIS1_STEPS_PER_DEGREE/240.0F)*SIDEREAL_RATIO_F;
 
   // --- Acceleration-ramp bypass info ---
-  const float bypassThreshold = SERVO_BYPASS_ACCEL_MAX_RATE_MULT * trackingFrequency;
-  VF("MSG:"); V(axisPrefix);
-  VF("Accel ramp: BYPASS when not slewing and |cmd| <= ");
-  V((float)bypassThreshold); VF(" steps/s ");
-  VF("(mult="); V((float)SERVO_BYPASS_ACCEL_MAX_RATE_MULT);
-  VF(", tracking="); V((float)trackingFrequency); VLF(" steps/s)");
+  #ifdef SERVO_BYPASS_ACCEL_WHILE_TRACKING
+      const float bypassThreshold = SERVO_BYPASS_ACCEL_MAX_RATE_MULT * trackingFrequency;
+      VF("MSG:"); V(axisPrefix);
+      VF("Accel ramp: BYPASS when not slewing and |cmd| <= ");
+      V((float)bypassThreshold); VF(" steps/s ");
+      VF("(mult="); V((float)SERVO_BYPASS_ACCEL_MAX_RATE_MULT);
+      VF(", tracking="); V((float)trackingFrequency); VLF(" steps/s)");
+
+      // enable bypassing acceleration
+      driver->setBypassAccelOnTracking(true);
+  #endif
 
   // start the motion timer
   VF("MSG:"); V(axisPrefix); VF("start task to synthesize motion... ");
@@ -308,13 +313,17 @@ void ServoMotor::poll() {
 
   long unfilteredEncoderCounts = encoderCounts;
   UNUSED(unfilteredEncoderCounts);
+
   // “Slow mode” when commanded speed is at/below threshold and not slewing
-  const bool slowMode = (fabsf(currentFrequency) <= SERVO_BYPASS_ACCEL_MAX_RATE_MULT * trackingFrequency);
-  const bool bypass   = (!slewing) && slowMode;
+  #ifdef SERVO_BYPASS_ACCEL_WHILE_TRACKING
+    const bool slowMode = (fabsf(currentFrequency) <= SERVO_BYPASS_ACCEL_MAX_RATE_MULT * trackingFrequency);
+  #else
+    const bool slowMode = false;
+  #endif
 
   // Old behavior for isTracking
   //bool isTracking = (abs(currentFrequency - trackingFrequency) < trackingFrequency/10.0F);
-  bool isTracking = bypass;
+  const bool isTracking = (!slewing) && slowMode;
   driver->setTrackingMode(isTracking);
 
   encoderCounts = filter->update(encoderCounts, motorCounts, isTracking);

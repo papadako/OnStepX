@@ -35,10 +35,11 @@
 #endif
 
 // Disable accel ramp when command speed is "slow"
-#ifndef SERVO_BYPASS_ACCEL_MAX_RATE_MULT
-  #define SERVO_BYPASS_ACCEL_MAX_RATE_MULT 3.0f   // up to 3× sidereal => no ramp
+#ifdef SERVO_BYPASS_ACCEL_WHILE_TRACKING
+  #ifndef SERVO_BYPASS_ACCEL_MAX_RATE_MULT
+    #define SERVO_BYPASS_ACCEL_MAX_RATE_MULT 3.0f   // up to 3× sidereal => no ramp
+  #endif
 #endif
-
 
 class ServoMotor : public Motor {
   public:
