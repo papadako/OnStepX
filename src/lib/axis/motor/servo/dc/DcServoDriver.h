@@ -50,14 +50,14 @@
 // Nonlinear concave mapping near zero (further help kick)
 #ifdef SERVO_NONLINEAR_ENABLE
   #ifndef SERVO_NONLINEAR_GAMMA
-    #define SERVO_NONLINEAR_GAMMA 0.65f    // concave (0.5–0.8 is a good range)
+    #define SERVO_NONLINEAR_GAMMA 0.90f    // concave
   #endif
   #ifndef SERVO_NONLINEAR_KNEE_CPS
     #define SERVO_NONLINEAR_KNEE_CPS 25.0f // tune
   #endif
   // Relative knee: if >0, knee = velocityMax * percent; otherwise use absolute CPS
   #ifndef SERVO_NONLINEAR_KNEE_PERCENT
-    #define SERVO_NONLINEAR_KNEE_PERCENT 0.1f   // e.g., 0.10f for 10% of vmax; 0 => use absolute CPS
+    #define SERVO_NONLINEAR_KNEE_PERCENT 0.04f   // e.g., 0.10f for 10% of vmax; 0 => use absolute CPS
   #endif
 #endif
 
