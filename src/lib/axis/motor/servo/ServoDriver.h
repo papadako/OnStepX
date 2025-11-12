@@ -14,6 +14,48 @@
   #include "dc/SigmaDeltaDither.h"
 #endif
 
+// Enable to apply hysteresis around zero velocity
+#ifdef SERVO_HYSTERESIS_ENABLE
+  // Thresholds in encoder counts/sec
+  #ifndef SERVO_HYST_ENTER_CPS
+    #define SERVO_HYST_ENTER_CPS 3.0f   // must exceed this to LEAVE zero
+  #endif
+  #ifndef SERVO_HYST_EXIT_CPS
+    #define SERVO_HYST_EXIT_CPS 1.0f    // drop below this to RETURN to zero
+  #endif
+  // Reset hysteresis on direction changes while "moving" (forces pass-through zero)
+  #ifndef SERVO_HYST_RESET_ON_DIR_FLIP
+    #define SERVO_HYST_RESET_ON_DIR_FLIP 1
+  #endif
+#endif
+
+// Stiction breakaway kick (ENABLE by defining SERVO_STICTION_KICK)
+#ifdef SERVO_STICTION_KICK
+  #ifndef SERVO_STICTION_KICK_MS
+    // duration of kick after zero->nonzero or direction flip
+    // depends on the mechanical time constant and electrical time constant of motors
+    #define SERVO_STICTION_KICK_MS 20
+  #endif
+
+  #ifndef SERVO_STICTION_KICK_PERCENT_MULTIPLIER
+    #define SERVO_STICTION_KICK_PERCENT_MULTIPLIER 3.50f // means 3.5x
+  #endif
+#endif
+
+// Nonlinear concave mapping near zero (further help kick)
+#ifdef SERVO_NONLINEAR_ENABLE
+  #ifndef SERVO_NONLINEAR_GAMMA
+    #define SERVO_NONLINEAR_GAMMA 0.90f    // concave
+  #endif
+  #ifndef SERVO_NONLINEAR_KNEE_CPS
+    #define SERVO_NONLINEAR_KNEE_CPS 25.0f // tune
+  #endif
+  // Relative knee: if >0, knee = velocityMax * percent; otherwise use absolute CPS
+  #ifndef SERVO_NONLINEAR_KNEE_PERCENT
+    #define SERVO_NONLINEAR_KNEE_PERCENT 0.04f   // e.g., 0.10f for 10% of vmax; 0 => use absolute CPS
+  #endif
+#endif
+
 typedef struct ServoPins {
   int16_t ph1; // step
   int16_t ph1State;
