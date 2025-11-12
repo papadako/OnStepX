@@ -71,11 +71,13 @@ bool ServoDriver::init(bool reverse) {
     #endif
 
     // --- Nonlinear mapping near zero ---
-    #if SERVO_NONLINEAR_ENABLE
+    #ifdef SERVO_NONLINEAR_ENABLE
       VF("MSG:"); V(axisPrefix);
       VF("Nonlinear map: ENABLED  gamma="); V((float)SERVO_NONLINEAR_GAMMA);
-      #if (SERVO_NONLINEAR_KNEE_PERCENT > 0.0f)
-        VF(", knee="); V((float)(SERVO_NONLINEAR_KNEE_PERCENT * 100.0f)); VLF("% of vmax");
+      #ifdef SERVO_NONLINEAR_KNEE_PERCENT
+        const float kneePctCfg = SERVO_NONLINEAR_KNEE_PERCENT;
+        float v_knee = velocityMax * kneePctCfg;
+        VF(", knee="); V(v_knee); VLF("% of vmax");
       #else
         VF(", knee="); V((float)SERVO_NONLINEAR_KNEE_CPS); VLF(" cps");
       #endif
