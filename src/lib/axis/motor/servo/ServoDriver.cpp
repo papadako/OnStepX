@@ -90,7 +90,6 @@ float ServoDriver::setMotorVelocity(float velocity) {
   if (velocity > velocityMax) velocity = velocityMax; else
   if (velocity < -velocityMax) velocity = -velocityMax;
 
-  VF("bypass:"); V(bypassAccelOnTracking); VF("trackingMode"); V(trackingMode); VLF(" steps/s");
   // If bypassAccelOnTracking is set and we are in tracking mode, skip the acceleration ramp
   if(bypassAccelOnTracking && trackingMode)
     velocityRamp = velocity;
