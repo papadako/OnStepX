@@ -1,0 +1,5 @@
+Information from sidereal operations manual https://www.siderealtechnology.com/OperationsManual.pdf
+
+- control loops run at about 2 Khz 
+- Dynamic PWM, 31 KHz for tracking, 7-8 KHz for slewing
+- PWM resolution, only 8 bit

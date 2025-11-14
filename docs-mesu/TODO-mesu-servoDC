@@ -1,0 +1,7 @@
+some of my TODO list
+
+- hardware encoder implementation for teensy 4.x
+- inner velocity control loop with reciprocal velocity and ema-filtering
+- integrate calibration code with SWS and make a routine that takes measurements every X degrees from east to west 
+- experiment with the kick, hysterisis, non-linear mapping, no-ramp options and check their effects
+- experiment with 36.6 KHz and 12 bit PWM frequency and resolution and dynamic PWM (Teensy 4.1 can do it and my h-bridge TC78H660FNG is specified up to 400 kHz max at 50% duty
