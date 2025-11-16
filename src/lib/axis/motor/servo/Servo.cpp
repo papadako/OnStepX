@@ -68,7 +68,7 @@ bool ServoMotor::init() {
 
   #ifdef CALIBRATE_SERVO_DC
     calibrateVelocity = new ServoCalibrateTrackingVelocity(axisNumber);
-    driver->setTrackingMode(false);
+    driver->setTrackingMode(true);
     driver->setBypassAccelOnTracking(true);
     currentFrequency = 0.0f;                    // no trajectory input
     slewing = false;
